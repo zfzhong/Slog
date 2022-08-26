@@ -1,0 +1,37 @@
+{
+  "devDependencies": {
+    "@fitbit/sdk": "~6.1.0",
+    "@fitbit/sdk-cli": "^1.7.3"
+  },
+  "name": "code",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "fitbit": {
+    "appUUID": "598334c2-d2ca-4d65-bf26-2ecd68eb38d9",
+    "appType": "app",
+    "appDisplayName": "SLog_4.0",
+    "iconFile": "resources/icon.png",
+    "wipeColor": "#ffffff",
+    "requestedPermissions": [
+      "run_background",
+      "access_activity",
+      "access_heart_rate",
+      "access_user_profile",
+      "access_internet"
+    ],
+    "buildTargets": [
+      "vulcan"
+    ],
+    "i18n": {
+      "en-US": {
+        "name": "SLog_4.0"
+      }
+    },
+    "defaultLanguage": "en-US"
+  },
+  "scripts": {
+    "build": "fitbit-build",
+    "debug": "fitbit"
+  }
+}
