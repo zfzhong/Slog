@@ -676,8 +676,14 @@ function logHeart() {
 
 // Log body presence status
 function logPresence() {
-  // Write the timestamps and presence value
-  bpsRecordTimeView[0] = Date.now();
+  let currTime = Date.now()
+  console.log(`${currTime}`)
+  bpsRecordTimeView[0] = (currTime / Math.pow(2, 32));
+  console.log(`${currTime / Math.pow(2, 32)}`)
+  console.log(`${bpsRecordTimeView[0]}`)
+  bpsRecordTimeView[1] = (currTime & (Math.pow(2, 32)-1));
+  console.log(`${currTime & (Math.pow(2, 32)-1)}`)
+  console.log(`${bpsRecordTimeView[1]}`)
   bpsRecordPresView[0] = bps.present;
   fs.writeSync(bpsLogFD, bpsRecord);
 

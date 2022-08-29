@@ -209,9 +209,9 @@ export function setBPSConfig(freq) {
   }
 
   // Structure of the body presence sensor log record
-  bpsRecordSize = 8;
+  bpsRecordSize = 12;
   bpsRecord = new ArrayBuffer(bpsRecordSize);
-  bpsRecordTimeView = new Uint32Array(bpsRecord, 0, 1);
-  bpsRecordPresView = new Uint32Array(bpsRecord, 4, 1);
+  bpsRecordTimeView = new Uint32Array(bpsRecord, 0, 2);
+  bpsRecordPresView = new Uint32Array(bpsRecord, 8, 1);
 }
 // ================================================================

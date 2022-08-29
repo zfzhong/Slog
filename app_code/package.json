@@ -8,9 +8,9 @@
   "private": true,
   "license": "UNLICENSED",
   "fitbit": {
-    "appUUID": "598334c2-d2ca-4d65-bf26-2ecd68eb38d9",
+    "appUUID": "0b289dd0-f8db-43de-89aa-faf151e4e56b",
     "appType": "app",
-    "appDisplayName": "SLog_4.0",
+    "appDisplayName": "SLog_4.1",
     "iconFile": "resources/icon.png",
     "wipeColor": "#ffffff",
     "requestedPermissions": [
@@ -25,7 +25,7 @@
     ],
     "i18n": {
       "en-US": {
-        "name": "SLog_4.0"
+        "name": "SLog_4.1"
       }
     },
     "defaultLanguage": "en-US"

@@ -136,7 +136,8 @@ function getConfigOptions() {
   options.accelFreq = JSON.parse(settingsStorage.getItem('accelFreq')).values[0].name;
   options.gyroFreq = JSON.parse(settingsStorage.getItem('gyroFreq')).values[0].name;
   options.hrmFreq = JSON.parse(settingsStorage.getItem('hrmFreq')).values[0].name;
-  options.bpsFreq = JSON.parse(settingsStorage.getItem('bpsFreq')).values[0].name;
+  // options.bpsFreq = JSON.parse(settingsStorage.getItem('bpsFreq')).values[0].name;
+  options.bpsFreq = 1
   options.logStartTime = JSON.parse(settingsStorage.getItem('logStartTime')).values[0].value;
   options.logStopTime = JSON.parse(settingsStorage.getItem('logStopTime')).values[0].value;
   
@@ -360,8 +361,12 @@ function printBPSLog(data) {
   let content = '';
   while (readPos < dataSize) {
     // Read a time stamp (4 bytes)
-    let time = dataView.getUint32(readPos, true);
+    let time1 = dataView.getUint32(readPos, true);
     readPos += 4;
+    let time2 = dataView.getUint32(readPos, true);
+    readPos += 4;
+    let time = (time1 * Math.pow(2,32)) + time2;
+    
     let pres = dataView.getUint32(readPos, true)
     readPos += 4;
 
@@ -408,6 +413,7 @@ async function processAllFiles() {
     else if  (file.name.indexOf(bpsLogPrefix) != -1) {
       text = printBPSLog(data)
     }
+    console.log(text);
     console.log(`End log ${file.name}`);
 
     // Send the log to server
