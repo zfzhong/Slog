@@ -9,7 +9,7 @@ Slog is a an app for the Fitbit Sense that collects Heart Rate, Accelerometer, a
 - settings/index.jsx - frontend interface showing on phone to set recording parameters for app.
 - package.json - code environment configurations.
 
-## [app/index.js](blob/main/app_code/app/index.js)
+## [app/index.js](app_code/app/index.js)
   - to be done ...
 ## common/common.js
   - definitions: states, message types, file prfixes, 
