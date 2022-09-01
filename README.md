@@ -13,11 +13,7 @@ Slog is a an app for the Fitbit Sense that collects Heart Rate, Accelerometer, a
 ## common/common.js
 ## companion/index.js
 ## settings/index.jsx
- - status 
-   -- appStatus, logStatus, xferStatus
- - operation 
-   -- logBtn, xferBtn, resetLogBtn, resetXferBtn
- - configuration 
-   -- logStartTime, logStopTime, accelFreq, gyroFreq, hrmFreq, bpsFreq
- - others 
-   -- serverIP, serverPort
+ - status - appStatus, logStatus, xferStatus
+ - operation - logBtn, xferBtn, resetLogBtn, resetXferBtn
+ - configuration - logStartTime, logStopTime, accelFreq, gyroFreq, hrmFreq, bpsFreq
+ - others - serverIP, serverPort
