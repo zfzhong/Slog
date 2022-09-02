@@ -201,7 +201,7 @@ function closeApp() {
 
   // Set status to idle and notify companion
   appStatus = appIsIdle;
-  notifyGist();
+  // notifyGist();
 
   // Save the app state
   fs.writeFileSync(gistFile, getAppGist(), "cbor");
