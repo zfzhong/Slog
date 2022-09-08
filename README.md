@@ -10,7 +10,7 @@ Slog is a an app for the Fitbit Sense that collects Heart Rate, Accelerometer, a
 - package.json - code environment configurations.
 
 ## [app/index.js](app_code/app/index.js)
-  - The main logic start from function openApp(), where event listener handlePeerMessage() gets setup. It receives messages from the companion, and does corresponding work following the command in the message.
+  - The main logic starts from function openApp(), where event listener handlePeerMessage() gets setup. It receives messages from the companion, and does corresponding work following the command in the message.
 ## [common/common.js](app_code/common/common.js)
   - definitions: states, message types, file prfixes, 
   - Accelerometer sensor and log record settings 
