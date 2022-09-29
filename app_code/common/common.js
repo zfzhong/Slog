@@ -105,6 +105,7 @@ export function getLogStopDelay() {
 export let accelConfig = {};
 export let accelRecordSize;
 export let accelRecord;
+export let accelRecordAbsTimeView;
 export let accelRecordTimeView;
 export let accelRecordXView;
 export let accelRecordYView;
@@ -123,12 +124,16 @@ export function setAccelConfig(freq) {
   }
 
   // Structure of the accelerometer log record
-  accelRecordSize = (accelConfig.batch * 8);
+  accelRecordSize = (accelConfig.batch * 16);
   accelRecord = new ArrayBuffer(accelRecordSize);
-  accelRecordTimeView = new Uint16Array(accelRecord, 0, accelConfig.batch);
-  accelRecordXView = new Int16Array(accelRecord, 2 * accelConfig.batch, accelConfig.batch);
-  accelRecordYView = new Int16Array(accelRecord, 4 * accelConfig.batch, accelConfig.batch);
-  accelRecordZView = new Int16Array(accelRecord, 6 * accelConfig.batch, accelConfig.batch);
+  
+  // To store the absolute time, we need 32 x 2 = 64 bits
+  accelRecordAbsTimeView = new Uint32Array(accelRecord, 0, 2 * accelConfig.batch); 
+
+  accelRecordTimeView = new Uint16Array(accelRecord, 4 * 2 * accelConfig.batch, accelConfig.batch);
+  accelRecordXView = new Int16Array(accelRecord, 5 * 2 * accelConfig.batch, accelConfig.batch);
+  accelRecordYView = new Int16Array(accelRecord, 6 * 2 * accelConfig.batch, accelConfig.batch);
+  accelRecordZView = new Int16Array(accelRecord, 7 * 2 * accelConfig.batch, accelConfig.batch);
 }
 
 

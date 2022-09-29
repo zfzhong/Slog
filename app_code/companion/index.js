@@ -9,7 +9,7 @@ import {
   hrmConfig, accelConfig, gyroConfig, bpsConfig,
   setHRMConfig, setAccelConfig, setGyroConfig, setBPSConfig,
   accelLogPrefix, gyroLogPrefix, hrmLogPrefix, bpsLogPrefix,
-  accelRecordSize, accelRecord, accelRecordTimeView,
+  accelRecordSize, accelRecord, accelRecordTimeView, accelRecordAbsTimeView,
   accelRecordXView, accelRecordYView, accelRecordZView,
   gyroRecordSize, gyroRecord, gyroRecordTimeView,
   gyroRecordXView, gyroRecordYView, gyroRecordZView,
@@ -38,6 +38,8 @@ import { peerSocket } from "messaging";
 let appStatus = appIsNone;
 
 // URL of the server receiving files
+let serverIP;
+let serverPort;
 let serverURL = null;
 
 // Initialize the companion
@@ -55,11 +57,11 @@ function init() {
   settingsStorage.addEventListener('change', handleSettingsChange);
 
   // Get server's IP address, port number, and update the URL
-  let serverIP = JSON.parse(settingsStorage.getItem('serverIP')).name;
-  let serverPort = JSON.parse(settingsStorage.getItem('serverPort')).name;
+  serverIP = JSON.parse(settingsStorage.getItem('serverIP')).name;
+  serverPort = JSON.parse(settingsStorage.getItem('serverPort')).name;
   if (serverIP && serverPort)
-    serverURL = `http://${serverIP}:${serverPort}/htbin/hello.py`;
-
+    //serverURL = `http://${serverIP}:${serverPort}/htbin/hello.py`;
+    serverURL = `http://${serverIP}:${serverPort}/xfer/`;
   // Display app status
   settingsStorage.setItem('appStatusText', `App is ${appStatusString[appStatus]}`);
   settingsStorage.setItem('resetLogBtnLabel', 'Reset Logging');
@@ -118,12 +120,12 @@ function handleSettingsChange(evnt) {
     case 'serverIP':
       // Get server's IP address and update the URL
       serverIP = JSON.parse(settingsStorage.getItem('serverIP')).name;
-      serverURL = `http://${serverIP}:${serverPort}/htbin/hello.py`;
+      serverURL = `http://${serverIP}:${serverPort}/xfer/`;
       return;
     case 'serverPort':
       // Get server's port number and update the URL
       serverPort = JSON.parse(settingsStorage.getItem('serverPort')).name;
-      serverURL = `http://${serverIP}:${serverPort}/htbin/hello.py`;
+      serverURL = `http://${serverIP}:${serverPort}/xfer/`;
       return;
     default:
       return;
@@ -234,6 +236,12 @@ function printAccelLog(data) {
     // Read the compressed record
     // Read a batch of time stamps (each 2 bytes)
     for (let i = 0; i < accelConfig.batch; i++) {
+      accelRecordAbsTimeView[2 * i] = dataView.getUint32(readPos + i * 8, true);
+      accelRecordAbsTimeView[2 * i + 1] = dataView.getUint32(readPos + i * 8 + 4, true);
+    }
+    readPos += accelConfig.batch * 8;
+
+    for (let i = 0; i < accelConfig.batch; i++) {
       accelRecordTimeView[i] = dataView.getUint16(readPos + i * 2, true)
     }
     readPos += accelConfig.batch * 2;
@@ -262,7 +270,8 @@ function printAccelLog(data) {
     // Print each individual reading
     for (let i = 0; i < accelConfig.batch; i++) {
       // console.log(`A, ${accelRecordTimeView[i]}, ${accelRecordXView[i]}, ${accelRecordYView[i]}, ${accelRecordZView[i]}`);
-      content += `A, ${accelRecordTimeView[i]}, ${accelRecordXView[i]}, ${accelRecordYView[i]}, ${accelRecordZView[i]}\n`;
+      let absTime = accelRecordAbsTimeView[2 * i] * Math.pow(2, 32) + accelRecordAbsTimeView[2 * i + 1];
+      content += `A, ${absTime}, ${accelRecordTimeView[i]}, ${accelRecordXView[i]}, ${accelRecordYView[i]}, ${accelRecordZView[i]}\n`;
     }
   }
 

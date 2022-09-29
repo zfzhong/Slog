@@ -7,6 +7,7 @@ function settingsComponent(props) {
         <Text bold align='center'>{props.settingsStorage.getItem('appStatusText')}
           <Text bold align='center'>{props.settingsStorage.getItem('logStatusText')}</Text>
           <Text bold align='center'>{props.settingsStorage.getItem('xferStatusText')}</Text>
+          <Text bold align='center'>{props.settingsStorage.getItem('appErrorText')}</Text>          
         </Text>
 
       <Section
@@ -149,6 +150,22 @@ function settingsComponent(props) {
         />
         <Select
           title={null}
+          selectViewTitle="Accel Batch Size"
+          label="Accelerometer Batch Size"
+          settingsKey="accelBatch"
+          options={
+            [
+              {name:"5"},
+              {name:"10"},
+              {name:"20"},
+              {name:"25"},
+              {name:"50"},
+              {name:"100"}
+            ]
+          }
+        />
+        <Select
+          title={null}
           selectViewTitle="Gyro Frequency"
           label="Gyroscope Frequency"
           settingsKey="gyroFreq"
@@ -198,6 +215,22 @@ function settingsComponent(props) {
           label="Server Port"
           settingsKey="serverPort"
         />
+        <TextInput        
+          label="Device ID"
+          settingsKey="deviceID"
+        />
+        <Select
+          title={null}
+          selectViewTitle="Protocol Selection"
+          label="Protocol Selection"
+          settingsKey="protocolName"
+          options={
+            [
+              {name:"Sleep"},
+              {name:"Activity"},
+            ]
+          }
+        />  
     </Page>
   );
 }

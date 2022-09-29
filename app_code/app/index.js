@@ -10,7 +10,7 @@ import {
   hrmConfig, accelConfig, gyroConfig, bpsConfig,
   setHRMConfig, setAccelConfig, setGyroConfig, setBPSConfig,
   accelLogPrefix, gyroLogPrefix, hrmLogPrefix, bpsLogPrefix,
-  accelRecordSize, accelRecord, accelRecordTimeView,
+  accelRecordSize, accelRecord, accelRecordTimeView, accelRecordAbsTimeView,
   accelRecordXView, accelRecordYView, accelRecordZView,
   gyroRecordSize, gyroRecord, gyroRecordTimeView,
   gyroRecordXView, gyroRecordYView, gyroRecordZView,
@@ -549,7 +549,11 @@ function logAccel() {
   let y = scientific.div(accel.readings.y, accelScaler);
   let z = scientific.div(accel.readings.z, accelScaler);
   for (let i = 0; i < accelConfig.batch; i++) {
-    accelRecordTimeView[i] = accel.readings.timestamp[i]
+    let currTime = Date.now();
+    accelRecordAbsTimeView[2 * i] = (currTime / Math.pow(2, 32));
+    accelRecordAbsTimeView[2 * i + 1] = (currTime & (Math.pow(2, 32)-1));
+
+    accelRecordTimeView[i] = accel.readings.timestamp[i];
     accelRecordXView[i] = Math.round(x[i]);
     accelRecordYView[i] = Math.round(y[i]);
     accelRecordZView[i] = Math.round(z[i]);
