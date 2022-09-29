@@ -28,4 +28,73 @@ Slog is a an app for the Fitbit Sense that collects Heart Rate, Accelerometer, a
  - status - appStatus, logStatus, xferStatus
  - operation - logBtn, xferBtn, resetLogBtn, resetXferBtn
  - configuration - logStartTime, logStopTime, accelFreq, gyroFreq, hrmFreq, bpsFreq
- - others - serverIP, serverPort
+ - others - serverIP, serverPort, userID
+
+ ## Design Logic
+ - userID is designed such that every user can be differentiated at the server side.
+ - when save log files, ideally the APP should also put datetime info in the filename, however we decide to do the work on the server side, since putting to much logic in the filenames on the fit app just make things too complicated. Keep in mind that everything become much easier on the server side.
+ - when the fit app uploads files to the server, it also sends an unique userID. Any files received in the server side will be renamed: appending userID and timestamp to the original filename. For example:
+ ```
+   Accel2.bin ---> Accel2-davidz-20220912|12:21:32.bin
+ ``` 
+ - The userID should be an ID that's authenticated by the server.
+
+ ## Server Side Design
+ - The server side waits for files to be uploaded. Upon receiving each file, it quickly scan the file and get statistics, and store the statistics in database.
+ - The statistics datatable contains: filename, # of records, max-timediff, min-timediff, frequency, # of segments, created; "filename" is the unique key.
+ - The segments datatable: filename, seg-start, seg-length, created; "filename + seg-start" is the unique key.
+ - for authentication purpose, we have to customize the user table.
+
+ ## Timestamp Discrepency Issue (missing, duplicates)
+ - Seems duplicates always happen after timestamp gaps. Why do we have timestamp gaps?
+ - one scenario: 120 ms missing:
+ ```
+   63624, 231, 874, 8121
+   63674
+   63724
+   63743, 225, 869, 
+   63793
+ ```
+ - another scenario: 110 ms missing:
+ ```
+A, 703, -1171, -4551, 6678
+A, 713, -1146, -4589, 6672
+A, 723, -1154, -4595, 6639
+A, 733, -1166, -4582, 6624
+A, 743, -1160, -4589, 6652
+A, 752, -1149, -4584, 6692
+A, 762, -1151, -4532, 6706
+A, 772, -1168, -4480, 6663
+A, 782, -1206, -4478, 6682
+A, 792, -1207, -4515, 6701
+   801
+   811
+   821
+   831
+   841
+   851
+   861
+   871
+   881
+   891
+A, 901, -1171, -4552, 6650
+A, 911, -1169, -4534, 6655
+A, 921, -1163, -4525, 6650
+A, 931, -1177, -4532, 6658
+A, 941, -1175, -4544, 6653
+A, 950, -1186, -4526, 6667
+A, 960, -1174, -4531, 6682
+A, 970, -1177, -4517, 6693
+A, 980, -1190, -4522, 6698
+A, 990, -1187, -4540, 6702
+A, 1000, -1215, -4545, 6683
+A, 901, -1171, -4552, 6650
+A, 911, -1169, -4534, 6655
+A, 921, -1163, -4525, 6650
+A, 931, -1177, -4532, 6658
+A, 941, -1175, -4544, 6653
+A, 950, -1186, -4526, 6667
+A, 960, -1174, -4531, 6682
+A, 970, -1177, -4517, 6693
+A, 980, -1190, -4522, 6698
+```
