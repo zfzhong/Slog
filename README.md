@@ -1,100 +1,47 @@
-# Slog
-Slog is a an app for the Fitbit Sense that collects Heart Rate, Accelerometer, and Gyroscope data.
+# Why Absolute Timestamps? 
+We put a absolute timestamp in every row of data from Accelerometer batch reading. Since the
+reading from Accelerometer involves timestamp gaps and duplicates. To make sure that the gaps 
+and duplicates come from batch reading, not caused by the code logic after reading, we put a 
+absolute timestamp in each row. 
 
-## Code Structure
-- app/index.js - records batched sensor readings and stores data in multiple files.
-- common/common.js - parameters and setup configurations for both app and companion.
-- companion/index.js - companion to pull log data from fitbit.
-- resources/ - resource files.
-- settings/index.jsx - frontend interface showing on phone to set recording parameters for app.
-- package.json - code environment configurations.
+The logic is that the absolute timestamps should be coherent (or discretively continuous). If
+the absolute timestamps are not coherent, then it means something happened after we read data 
+from the Accelerometer batch.
 
-## [app/index.js](app_code/app/index.js)
-  - The main logic starts from function openApp(), where event listener handlePeerMessage() gets setup. It receives messages from the companion, and does corresponding work following the command in the message.
-## [common/common.js](app_code/common/common.js)
-  - definitions: states, message types, file prfixes, 
-  - Accelerometer sensor and log record settings 
-  - Gyroscope sensor and log record settings
-  - Heart rate monitor and log record settings
-  - Body presence sensor and log record settings
-## [companion/index.js](app_code/companion/index.js)
-  - init() - handleSettingChange, processAllFiles
-  - getConfigOptions, setConfigOptions
-  - sendMesg, handlePeerClose, handlePeerMessage
-  - printAccelLog, printGyroLog, printHRMLog, printBPSLog, 
-  - The main logic starts from function init(), where we set up handleSettingsChange(evnt), which handles the following operations: logBtnClick, xferBtnClick, resetLogBtnClick, resetXferBtnClick, serverIP, and serverPort.
-  - when logBtn is clicked, the companion sends message to the watch. The watch receives the message, and starts to log or stops logging.
-## [settings/index.jsx](app_code/settings/index.jsx)
- - status - appStatus, logStatus, xferStatus
- - operation - logBtn, xferBtn, resetLogBtn, resetXferBtn
- - configuration - logStartTime, logStopTime, accelFreq, gyroFreq, hrmFreq, bpsFreq
- - others - serverIP, serverPort, userID
+For example, if two processes are writing to the same file in parallel, they might over-write 
+some of the data rows. The writing discrepancy will cause data discrepancy. If that happens, 
+the absolute timestamps will not be coherent.
 
- ## Design Logic
- - userID is designed such that every user can be differentiated at the server side.
- - when save log files, ideally the APP should also put datetime info in the filename, however we decide to do the work on the server side, since putting to much logic in the filenames on the fit app just make things too complicated. Keep in mind that everything become much easier on the server side.
- - when the fit app uploads files to the server, it also sends an unique userID. Any files received in the server side will be renamed: appending userID and timestamp to the original filename. For example:
- ```
-   Accel2.bin ---> Accel2-davidz-20220912|12:21:32.bin
- ``` 
- - The userID should be an ID that's authenticated by the server.
+# Data Collected
+We collected the following data with Fitbit timestamp gaps and duplicates:
 
- ## Server Side Design
- - The server side waits for files to be uploaded. Upon receiving each file, it quickly scan the file and get statistics, and store the statistics in database.
- - The statistics datatable contains: filename, # of records, max-timediff, min-timediff, frequency, # of segments, created; "filename" is the unique key.
- - The segments datatable: filename, seg-start, seg-length, created; "filename + seg-start" is the unique key.
- - for authentication purpose, we have to customize the user table.
+| Absolute Timestamp | Fitbit Timestamp | x | y | z | Notes |
+| :--: | :--: | :-: | :-: | :-: | :-- |
+| 1664461556843 | 57436 | -8 | -120 | 8125 | starting of the batch |
+| 1664461556843 | 57456 | -9 | -129 | 8142 |
+| 1664461556844 | 57476 | -4 | -120 | 8153 |
+| 1664461556844 | 57496 | -29 | -143 | 8148 |
+| 1664461556845 | 57515 | -26 | -122 | 8159 |
+| 1664461556845 | 57535 | -27 | -121 | 8156 |
+| 1664461556846 | 57555 | -36 | -115 | 8178 |
+| 1664461556846 | 57575 | -19 | -127 | 8144 |
+| 1664461556847 | <mark>57694</mark> | -34 | -137 | 8169 | <-- gap |
+| 1664461556847 | 57713 | -25 | -112 | 8132 |
+| 1664461556848 | 57733 | -14 | -132 | 8145 |
+| 1664461556848 | 57753 | -33 | -113 | 8148 |
+| 1664461556849 | 57773 | -3 | -109 | 8164 |
+| 1664461556849 | <mark>57694</mark> | -34 | -137 | 8169 | <-- duplication.
+| 1664461556850 | 57713 | -25 | -112 | 8132 |
+| 1664461556850 | 57733 | -14 | -132 | 8145 |
+| 1664461556851 | 57753 | -33 | -113 | 8148 |
+| 1664461556851 | 57773 | -3 | -109 | 8164 |
+| 1664461556852 | 57793 | -36 | -116 | 8135 |
+| 1664461556852 | 57813 | -19 | -116 | 8157 |
 
- ## Timestamp Discrepency Issue (missing, duplicates)
- - Seems duplicates always happen after timestamp gaps. Why do we have timestamp gaps?
- - one scenario: 120 ms missing:
- ```
-   63624, 231, 874, 8121
-   63674
-   63724
-   63743, 225, 869, 
-   63793
- ```
- - another scenario: 110 ms missing:
- ```
-A, 703, -1171, -4551, 6678
-A, 713, -1146, -4589, 6672
-A, 723, -1154, -4595, 6639
-A, 733, -1166, -4582, 6624
-A, 743, -1160, -4589, 6652
-A, 752, -1149, -4584, 6692
-A, 762, -1151, -4532, 6706
-A, 772, -1168, -4480, 6663
-A, 782, -1206, -4478, 6682
-A, 792, -1207, -4515, 6701
-   801
-   811
-   821
-   831
-   841
-   851
-   861
-   871
-   881
-   891
-A, 901, -1171, -4552, 6650
-A, 911, -1169, -4534, 6655
-A, 921, -1163, -4525, 6650
-A, 931, -1177, -4532, 6658
-A, 941, -1175, -4544, 6653
-A, 950, -1186, -4526, 6667
-A, 960, -1174, -4531, 6682
-A, 970, -1177, -4517, 6693
-A, 980, -1190, -4522, 6698
-A, 990, -1187, -4540, 6702
-A, 1000, -1215, -4545, 6683
-A, 901, -1171, -4552, 6650
-A, 911, -1169, -4534, 6655
-A, 921, -1163, -4525, 6650
-A, 931, -1177, -4532, 6658
-A, 941, -1175, -4544, 6653
-A, 950, -1186, -4526, 6667
-A, 960, -1174, -4531, 6682
-A, 970, -1177, -4517, 6693
-A, 980, -1190, -4522, 6698
-```
+Since the absolute timestamps are coherent in the data above, we believe the data is intact after 
+being read from Accelerometer batch.
+
+# Why Did the Problem Happen?
+It might be that some parts of our code affect the memory of the batch or the accelerometer
+reading. Since Fitbit provides very limited documentation on Accelerometer batch reading, we are 
+in a very difficult sitution to debug the problem.
