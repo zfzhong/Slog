@@ -37,9 +37,6 @@ import { peerSocket } from "messaging";
 // Status of the App
 let appStatus = appIsNone;
 
-// URL of the server receiving files
-let serverURL = null;
-
 // Initialize the companion
 init();
 
@@ -53,12 +50,6 @@ function init() {
 
   // Set a callback for settings change events
   settingsStorage.addEventListener('change', handleSettingsChange);
-
-  // Get server's IP address, port number, and update the URL
-  let serverIP = JSON.parse(settingsStorage.getItem('serverIP')).name;
-  let serverPort = JSON.parse(settingsStorage.getItem('serverPort')).name;
-  if (serverIP && serverPort)
-    serverURL = `http://${serverIP}:${serverPort}/htbin/hello.py`;
 
   // Display app status
   settingsStorage.setItem('appStatusText', `App is ${appStatusString[appStatus]}`);
@@ -115,24 +106,25 @@ function handleSettingsChange(evnt) {
         sendMesg({type: msgResetXfer});
       };
       return;
-    case 'serverIP':
-      // Get server's IP address and update the URL
-      serverIP = JSON.parse(settingsStorage.getItem('serverIP')).name;
-      serverURL = `http://${serverIP}:${serverPort}/htbin/hello.py`;
-      return;
-    case 'serverPort':
-      // Get server's port number and update the URL
-      serverPort = JSON.parse(settingsStorage.getItem('serverPort')).name;
-      serverURL = `http://${serverIP}:${serverPort}/htbin/hello.py`;
-      return;
     default:
       return;
   }
 }
 
+// Get server URL for file transferring
+function getServerURL() {
+  let serverURL = JSON.parse(settingsStorage.getItem('serverURL')).name;
+  return serverURL;
+}
+
 // Get all configuration settings
 function getConfigOptions() {
   let options = {};
+
+  // Set device name and protocol name
+  options.deviceName = JSON.parse(settingsStorage.getItem('deviceID')).name;
+  options.protocolName = JSON.parse(settingsStorage.getItem('protocolName')).values[0].name;
+  
   options.accelFreq = JSON.parse(settingsStorage.getItem('accelFreq')).values[0].name;
   options.gyroFreq = JSON.parse(settingsStorage.getItem('gyroFreq')).values[0].name;
   options.hrmFreq = JSON.parse(settingsStorage.getItem('hrmFreq')).values[0].name;
@@ -386,7 +378,8 @@ function sendToServer(name, data) {
   const headers = { 'Content-type': name }
   let fetchInit = { method: 'POST', headers: headers, body: data }
   // let fetchInit = {method: 'POST', headers: {"Content-type": "application/octet-stream"}, body: data}
-  console.log(`${serverURL} ${fetchInit}`);
+  //console.log(`${serverURL} ${fetchInit}`);
+  let serverURL = getServerURL();
   fetch(serverURL, fetchInit);
   console.log(`Done sending ${name} to server`);
 }
@@ -413,7 +406,7 @@ async function processAllFiles() {
     else if  (file.name.indexOf(bpsLogPrefix) != -1) {
       text = printBPSLog(data)
     }
-    console.log(text);
+    //console.log(text);
     console.log(`End log ${file.name}`);
 
     // Send the log to server

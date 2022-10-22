@@ -20,8 +20,10 @@ import {
   accelScaler, gyroScaler, setLogStartTime, setLogStopTime,
   logStartTime, logStopTime, getLogStartDelay, getLogStopDelay,
   appIsNone, appIsIdle, appIsTiming, appIsLogging, appIsXferring, appStatusString, appStatusColor,
-  msgAppGist, msgStartLog, msgStopLog, msgStartXfer, msgStopXfer, msgResetLog, msgResetXfer
+  msgAppGist, msgStartLog, msgStopLog, msgStartXfer, msgStopXfer, msgResetLog, msgResetXfer,
+  generateFileName,
 } from '../common/common.js';
+
 
 // Import file system module
 import * as fs from "fs";
@@ -81,6 +83,14 @@ const appStatusText, logStatusText, xferStatusText, appErrorText, appBackground;
 
 // Timers to remeber for canceling if needed
 let timerLogStart, timerLogStop;
+
+let deviceName, protocolName;
+
+let accelFiles = [];
+let gyroFiles = [];
+let heartFiles = [];
+let presenceFiles = [];
+
 // ================================================================
 
 
@@ -261,6 +271,9 @@ function doStartLog(options) {
   setBPSConfig(options.bpsFreq);
   setLogStartTime(options.logStartTime);
   setLogStopTime(options.logStopTime);
+
+  deviceName = options.deviceName;
+  protocolName = options.protocolName;
 
   // Schedule the start of logging
   timerLogStart = null;
@@ -507,7 +520,10 @@ function startRec() {
   }
 
   // Open the log files for appending
-  accelLogFD = fs.openSync(`${accelLogPrefix}${accelLogCount}.bin`, 'a');
+  let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount);
+  accelFiles[accelLogCount-1] = accelFilename;
+  accelLogFD = fs.openSync(accelFilename, "a");
+  
   gyroLogFD = fs.openSync(`${gyroLogPrefix}${gyroLogCount}.bin`, 'a');
   hrmLogFD = fs.openSync(`${hrmLogPrefix}${hrmLogCount}.bin`, 'a');
   bpsLogFD = fs.openSync(`${bpsLogPrefix}${bpsLogCount}.bin`, 'a');
@@ -548,43 +564,39 @@ function logAccel() {
   let x = scientific.div(accel.readings.x, accelScaler);
   let y = scientific.div(accel.readings.y, accelScaler);
   let z = scientific.div(accel.readings.z, accelScaler);
-  for (let i = 0; i < accelConfig.batch; i++) {
-    accelRecordTimeView[i] = accel.readings.timestamp[i]
+
+  let dataLength = accel.readings.timestamp.length;
+  for (let i = 0; i < dataLength; i++) {
+    accelRecordTimeView[i] = accel.readings.timestamp[i]; // cast to a 16-bit integer
     accelRecordXView[i] = Math.round(x[i]);
     accelRecordYView[i] = Math.round(y[i]);
     accelRecordZView[i] = Math.round(z[i]);
   }
-  fs.writeSync(accelLogFD, accelRecord);
-
-  // Update the number of records
-  accelCurrLogRecordCount += accel.readings.timestamp.length;
+  
+  if (dataLength > 0) {
+    fs.writeSync(accelLogFD, accelRecord);
+    
+    // Update the number of records
+    accelCurrLogRecordCount += accel.readings.timestamp.length;
+  }
 
   // Check if we need to start a new log file
   if (accelCurrLogRecordCount >= accelLogRecordMax) {
     // Record limit reached.
     // Close the current log file
     fs.closeSync(accelLogFD);
-
+    
     // Start a new log file
     accelLogCount += 1;
-    accelLogFD = fs.openSync(`${accelLogPrefix}${accelLogCount}.bin`, 'a');
-
+    let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount);
+    accelFiles[accelLogCount-1] = accelFilename;
+    accelLogFD = fs.openSync(accelFilename, "a");
+    
     // Reset the record count
     accelCurrLogRecordCount = 0;
 
     // Send gist to companion
     notifyGist();
-  }
-
-  // Return here to skip printing to console
-  return;
-
-  // Display the readings on console log
-  console.log(`Accel : ${Date.now()}`);
-  for (let i = 0; i < accel.readings.timestamp.length; i++) {
-    console.log(`${accel.readings.timestamp[i]}, ${accel.readings.x[i]}, ${accel.readings.y[i]}, ${accel.readings.z[i]}`);
-    console.log(`${accelRecordTimeView[i]}, ${accelRecordXView[i]}, ${accelRecordYView[i]}, ${accelRecordZView[i]}`);
-    console.log(`${accelRecordXView[i] * accelScaler}, ${accelRecordYView[i] * accelScaler}, ${accelRecordZView[i] * accelScaler}`);
   }
 }
 
@@ -858,6 +870,7 @@ function printLogFiles() {
 
 
 // ================================================================
+
 // Get the next file to transfer
 function getNextXferFile() {
   // Send all body presence files first
@@ -872,7 +885,7 @@ function getNextXferFile() {
 
   // Send all accel files next
   if (accelLogCount > accelXferedCount) {
-    return(`${accelLogPrefix}${accelXferedCount+1}.bin`);
+    return accelFiles[accelXferedCount];
   };
 
   // Send all gyro rate files next

@@ -215,3 +215,11 @@ export function setBPSConfig(freq) {
   bpsRecordPresView = new Uint32Array(bpsRecord, 8, 1);
 }
 // ================================================================
+
+// generate file name following naming convention
+export function generateFileName(deviceName, protocolName, prefix, frequency, seqNumber) {
+  let d = new Date();
+  let s = d.toISOString();
+  let s1 = s.replace(/:/g, "-");
+  return `${deviceName}_${protocolName}_${prefix}_${frequency}_${seqNumber}_${s1}.bin`;
+}
