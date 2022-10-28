@@ -24,6 +24,7 @@ import {
   generateFileName,
 } from '../common/common.js';
 
+import { listDirSync } from "fs";
 
 // Import file system module
 import * as fs from "fs";
@@ -73,10 +74,10 @@ let accelLogCount = 0, gyroLogCount = 0, hrmLogCount = 0, bpsLogCount = 0;
 
 // Number of records in the current log file
 let accelCurrLogRecordCount = 0, gyroCurrLogRecordCount = 0;
-let hrmCurrLogRecordCount = 0, bpsCurrLogRecordCount= 0;
+let hrmCurrLogRecordCount = 0, bpsCurrLogRecordCount = 0;
 
 // Status of log file transfers
-let accelXferedCount = 0, gyroXferedCount = 0, hrmXferedCount = 0, bpsXferedCount = 0;
+let accelXferedCount = 0, gyroXferedCount = 0, hrmXferedCount = 0, bpsXferedCount = 0, totalXferedCount = 0;
 
 // Get hold of all the UI elements
 const appStatusText, logStatusText, xferStatusText, appErrorText, appBackground;
@@ -84,20 +85,14 @@ const appStatusText, logStatusText, xferStatusText, appErrorText, appBackground;
 // Timers to remeber for canceling if needed
 let timerLogStart, timerLogStop;
 
-let deviceName, protocolName;
-
-let accelFiles = [];
-let gyroFiles = [];
-let heartFiles = [];
-let presenceFiles = [];
-
+let experimentID, deviceName, protocolName;
 // ================================================================
 
 
 // ================================================================
 // Make a gist of the app status
 function getAppGist() {
-  return({
+  return ({
     appStatus: appStatus,
 
     accelLogCount: accelLogCount,
@@ -113,7 +108,8 @@ function getAppGist() {
     accelXferedCount: accelXferedCount,
     gyroXferedCount: gyroXferedCount,
     hrmXferedCount: hrmXferedCount,
-    bpsXferedCount: bpsXferedCount
+    bpsXferedCount: bpsXferedCount,
+    totalXferedCount: totalXferedCount
   });
 }
 
@@ -135,6 +131,7 @@ function setAppGist(gist) {
   gyroXferedCount = gist.gyroXferedCount;
   hrmXferedCount = gist.hrmXferedCount;
   bpsXferedCount = gist.bpsXferedCount;
+  totalXferedCount = gist.totalXferedCount;
 }
 
 // Notify the app state to companion
@@ -147,7 +144,7 @@ function notifyGist() {
 
   // Send the gist to companion
   if (peerSocket.readyState === peerSocket.OPEN) {
-    let mesg = {type: msgAppGist, data: getAppGist()}
+    let mesg = { type: msgAppGist, data: getAppGist() }
     peerSocket.send(mesg);
   } else {
     console.log('Socket not in open state')
@@ -155,6 +152,21 @@ function notifyGist() {
 }
 // ================================================================
 
+function listDirFiles() {
+  const listDir = listDirSync("/private/data");
+  let dirIter = listDir.next();
+  while (!dirIter.done) {
+    let filename = dirIter.value;
+    let stats = fs.statSync(filename);
+    if (stats) {
+      console.log("filename: " + filename + ", size: " + stats.size);
+    } else {
+      console.log(filename);
+    }
+
+    dirIter = listDir.next();
+  }
+}
 
 // ================================================================
 // Start with initializing the app
@@ -179,7 +191,7 @@ function openApp() {
 
   // Set up a callback for unload event
   me.onunload = closeApp;
-  
+
   // Create instances of sensors
   instantiateSensors();
 
@@ -189,12 +201,16 @@ function openApp() {
   xferStatusText = document.getElementById('xferStatusText');
   appErrorText = document.getElementById('appErrorText');
   appBackground = document.getElementById("appBackground");
-  
+
   // Check if this app was run before
   if (fs.existsSync(gistFile)) {
     // Restore the past state
     setAppGist(fs.readFileSync(gistFile, "cbor"));
   }
+
+
+  // Debug purpose
+  listDirFiles();
 
   // Set status to idle
   appStatus = appIsIdle;
@@ -254,10 +270,11 @@ function handlePeerMessage(evt) {
   }
 }
 
+
 // Process the start log message
 function doStartLog(options) {
   console.log(`doStartLog: options ${JSON.stringify(options)}`);
-  
+
   // This is allowed only when the app is idle
   if (appStatus != appIsIdle) {
     console.error(`doStartLog: Invalid when appStatus = ${appStatus}`);
@@ -282,20 +299,20 @@ function doStartLog(options) {
     // Logging enabled at all times
     // Start logging right now
     startRec();
-    
+
     // Change status to logging
     appStatus = appIsLogging;
   } else {
     // Logging is restricted to certain intervals
     // Find the time to start of logging
     let delay = getLogStartDelay();
-    
+
     console.log(`Log start delay is ${delay} ms.`)
-    
+
     if (delay > 0) {
       // Start logging after some delay
       timerLogStart = setTimeout(startRec, delay);
-    
+
       // Change status to timing
       appStatus = appIsTiming;
     } else {
@@ -319,7 +336,7 @@ function doStartLog(options) {
 // Process the stop log message
 function doStopLog() {
   console.log(`doStopLog`);
-  
+
   // This is allowed only when the app is on or logging
   if (appStatus != appIsTiming && appStatus != appIsLogging) {
     console.error(`doStopLog: Invalid when appStatus = ${appStatus}`);
@@ -347,7 +364,7 @@ function doStopLog() {
 // Process the start transfer message
 function doStartXfer() {
   console.log(`doStartXfer:`);
-  
+
   // This is allowed only when the app is idle
   if (appStatus != appIsIdle) {
     console.error(`doStartXfer: Invalid when appStatus = ${appStatus}`);
@@ -358,14 +375,16 @@ function doStartXfer() {
   appStatus = appIsXferring;
   notifyGist();
 
+
   // Start transferring log files
-  xferNextFile();
+  //xferNextFile();
+  listAndXferFiles();
 }
 
 // Process the stop transfer message
 function doStopXfer() {
   console.log(`doStopXfer:`);
-  
+
   // This is allowed only when the app is transferring
   if (appStatus != appIsXferring) {
     console.error(`doStopXfer: Invalid when appStatus = ${appStatus}`);
@@ -380,7 +399,7 @@ function doStopXfer() {
 // Process the reset log message
 function doResetLog() {
   console.log(`doResetLog:`);
-  
+
   // This is allowed only when the app is idle
   if (appStatus != appIsIdle) {
     console.error(`doResetLog: Invalid when appStatus = ${appStatus}`);
@@ -393,7 +412,7 @@ function doResetLog() {
   while ((dirIter = listDir.next()) && !dirIter.done) {
     fs.unlinkSync(dirIter.value);
   }
-  
+
   // Reset the logging file/record status
   accelLogCount = 0;
   gyroLogCount = 0;
@@ -412,7 +431,7 @@ function doResetLog() {
 // Process the reset transfer message
 function doResetXfer() {
   console.log(`doResetXfer:`);
-  
+
   // This is allowed only when the app is idle
   if (appStatus != appIsIdle) {
     console.error(`doResetXfer: Invalid when appStatus = ${appStatus}`);
@@ -424,6 +443,7 @@ function doResetXfer() {
   gyroXferedCount = 0;
   hrmXferedCount = 0;
   bpsXferedCount = 0;
+  totalXferedCount = 0;
 
   // Notify companion
   notifyGist();
@@ -519,19 +539,21 @@ function startRec() {
     bpsLogCount = 1;
   }
 
+  // Generate experiment ID
+  experimentID = Date.now();
+
   // Open the log files for appending
-  let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount);
-  accelFiles[accelLogCount-1] = accelFilename;
+  let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
   accelLogFD = fs.openSync(accelFilename, "a");
-  
+
   gyroLogFD = fs.openSync(`${gyroLogPrefix}${gyroLogCount}.bin`, 'a');
   hrmLogFD = fs.openSync(`${hrmLogPrefix}${hrmLogCount}.bin`, 'a');
   bpsLogFD = fs.openSync(`${bpsLogPrefix}${bpsLogCount}.bin`, 'a');
 
   // Start reading sensors
   activateSensors();
-  
-    // Change status to logging and notify companion
+
+  // Change status to logging and notify companion
   appStatus = appIsLogging;
   notifyGist();
 }
@@ -550,7 +572,7 @@ function stopRec() {
   // Change status to idle and notify companion
   appStatus = appIsIdle;
   notifyGist();
-  
+
   // Note down the stop time
   console.log(`Logging stopped at ${Date.now()}`);
 }
@@ -572,10 +594,10 @@ function logAccel() {
     accelRecordYView[i] = Math.round(y[i]);
     accelRecordZView[i] = Math.round(z[i]);
   }
-  
+
   if (dataLength > 0) {
     fs.writeSync(accelLogFD, accelRecord);
-    
+
     // Update the number of records
     accelCurrLogRecordCount += accel.readings.timestamp.length;
   }
@@ -585,13 +607,12 @@ function logAccel() {
     // Record limit reached.
     // Close the current log file
     fs.closeSync(accelLogFD);
-    
+
     // Start a new log file
     accelLogCount += 1;
-    let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount);
-    accelFiles[accelLogCount-1] = accelFilename;
+    let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
     accelLogFD = fs.openSync(accelFilename, "a");
-    
+
     // Reset the record count
     accelCurrLogRecordCount = 0;
 
@@ -693,8 +714,8 @@ function logPresence() {
   bpsRecordTimeView[0] = (currTime / Math.pow(2, 32));
   console.log(`${currTime / Math.pow(2, 32)}`)
   console.log(`${bpsRecordTimeView[0]}`)
-  bpsRecordTimeView[1] = (currTime & (Math.pow(2, 32)-1));
-  console.log(`${currTime & (Math.pow(2, 32)-1)}`)
+  bpsRecordTimeView[1] = (currTime & (Math.pow(2, 32) - 1));
+  console.log(`${currTime & (Math.pow(2, 32) - 1)}`)
   console.log(`${bpsRecordTimeView[1]}`)
   bpsRecordPresView[0] = bps.present;
   fs.writeSync(bpsLogFD, bpsRecord);
@@ -875,26 +896,28 @@ function printLogFiles() {
 function getNextXferFile() {
   // Send all body presence files first
   if (bpsLogCount > bpsXferedCount) {
-    return(`${bpsLogPrefix}${bpsXferedCount+1}.bin`);
+    return (`${bpsLogPrefix}${bpsXferedCount + 1}.bin`);
   };
 
   // Send all heart rate files next
   if (hrmLogCount > hrmXferedCount) {
-    return(`${hrmLogPrefix}${hrmXferedCount+1}.bin`);
+    return (`${hrmLogPrefix}${hrmXferedCount + 1}.bin`);
   };
 
   // Send all accel files next
   if (accelLogCount > accelXferedCount) {
-    return accelFiles[accelXferedCount];
+    let filename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelXferedCount + 1, experimentID);
+    console.log("debug accel: " + filename);
+    return filename;
   };
 
   // Send all gyro rate files next
   if (gyroLogCount > gyroXferedCount) {
-    return(`${gyroLogPrefix}${gyroXferedCount+1}.bin`);
+    return (`${gyroLogPrefix}${gyroXferedCount + 1}.bin`);
   };
 
   // All done
-  return(null);
+  return (null);
 }
 
 // Set the next file to transfer
@@ -927,29 +950,29 @@ function setNextXferFile() {
 // Transfer a file
 function xferFile(file) {
   outbox
-  .enqueueFile(file)
-  .then((ft) => {
-    console.log(`Transfer of ${ft.name} successfully queued.`);
-    ft.onchange = () => {
-      console.log('File Transfer State: ' + ft.readyState);
-      if (ft.readyState === 'transferred') {
-        console.log('Transfer of ' + ft.name + ' completed.');
-        setNextXferFile();
-        notifyGist();
-        xferNextFile();
+    .enqueueFile(file)
+    .then((ft) => {
+      console.log(`Transfer of ${ft.name} successfully queued.`);
+      ft.onchange = () => {
+        console.log('File Transfer State: ' + ft.readyState);
+        if (ft.readyState === 'transferred') {
+          console.log('Transfer of ' + ft.name + ' completed.');
+          setNextXferFile();
+          notifyGist();
+          xferNextFile();
+        }
       }
-    }
-  })
-  .catch((error) => {
-    console.log(`Failed to schedule transfer: ${error}`);
-  })
+    })
+    .catch((error) => {
+      console.log(`Failed to schedule transfer: ${error}`);
+    })
 }
 
 // Transfer next file to companion
 function xferNextFile() {
   // Ensure app is in transfering status
   if (appStatus != appIsXferring) return;
-  
+
   // Display xfer status
   console.log(`xferNextFile: ${getAppGist()}`);
 
@@ -963,5 +986,65 @@ function xferNextFile() {
     appStatus = appIsIdle;
     notifyGist();
   }
+}
+
+function listAndXferFiles() {
+  const listDir = listDirSync("/private/data");
+  let dirIter = listDir.next();
+  let fileArray = [];
+  let i = 0;
+  while (!dirIter.done) {
+    let filename = dirIter.value;
+
+    fileArray[i] = filename;
+    i += 1;
+
+    dirIter = listDir.next();
+  }
+
+  if (totalXferedCount >= fileArray.length) {
+    appStatus = appIsIdle;
+    notifyGist();
+  } 
+  else 
+  {
+    xferFilesSequentially(fileArray, totalXferedCount);
+  }
+}
+
+function xferFilesSequentially(fileArray, i) {
+  if (i < 0 || i >= fileArray.length) return;
+
+  outbox
+    .enqueueFile(fileArray[i])
+    .then((ft) => {
+      ft.onchange = () => {
+        if (ft.readyState == 'transferred') {
+          //console.log('Transfer of ' + ft.name + ' completed.');
+
+          if (ft.name.indexOf(accelLogPrefix) != -1) {
+            accelXferedCount += 1;
+          } else if (ft.name.indexOf(gyroLogPrefix) != -1) {
+            gyroXferedCount += 1;
+          } else if (ft.name.indexOf(hrmLogPrefix) != -1) {
+            hrmXferedCount += 1;
+          } else if (ft.name.indexOf(bpsLogPrefix) != -1) {
+            bpsXferedCount += 1;
+          }
+
+          totalXferedCount += 1;
+
+          if (totalXferedCount >= fileArray.length) {
+            appStatus = appIsIdle;
+          }
+          notifyGist();
+
+          xferFilesSequentially(fileArray, i + 1);
+        }
+      }
+    })
+    .catch((error) => {
+      console.log(`Failed to schedule transfer: ${error}`);
+    });
 }
 // ================================================================

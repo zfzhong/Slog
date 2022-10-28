@@ -375,7 +375,7 @@ function sendToServer(name, data) {
   // console.log(`sendToServer(): content = ${data}`)
   console.log(`Sending ${name} to server ...`)
   // const headers = { 'Content-type': 'application/text', 'QUERY_STRING': name, 'HTTP_COOKIE': name }
-  const headers = { 'Content-type': name }
+  const headers = { 'FILENAME': name }
   let fetchInit = { method: 'POST', headers: headers, body: data }
   // let fetchInit = {method: 'POST', headers: {"Content-type": "application/octet-stream"}, body: data}
   //console.log(`${serverURL} ${fetchInit}`);
