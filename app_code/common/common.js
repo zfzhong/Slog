@@ -218,5 +218,7 @@ export function setBPSConfig(freq) {
 
 // generate file name following naming convention
 export function generateFileName(deviceName, protocolName, prefix, frequency, seqNumber, expId) {
-  return `${deviceName}_${protocolName}_${prefix}_${frequency}_${seqNumber}_${expId}.bin`;
+  // Record the timestamp when the file is created.
+  let t = Date.now();
+  return `${deviceName}_${protocolName}_${prefix}_${frequency}_${seqNumber}_${expId}_${t}.bin`;
 }
