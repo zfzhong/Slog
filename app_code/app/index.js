@@ -475,8 +475,6 @@ function instantiateSensors() {
 function activateSensors() {
   // Activate accelerometer
   if (accelConfig.frequency) {
-    console.log(`accelConfig.frequency: ${accelConfig.frequency}`);
-    console.log(`${JSON.stringify(accelConfig)}`);
     accel.setOptions(accelConfig);
     accel.start();
   };
@@ -516,10 +514,9 @@ function startRec() {
   console.log(`Logging Started at ${Date.now()}`);
 
   // Check if accel log file sequence started
-  if (accelLogCount == 0) {
-    // Start the sequence of accel log files
-    accelLogCount = 1;
-  }
+  //if (accelLogCount == 0) {
+  //  accelLogCount = 1;
+  //}
 
   // Check if gyro log file sequence started
   if (gyroLogCount == 0) {
@@ -543,8 +540,8 @@ function startRec() {
   experimentID = Date.now();
 
   // Open the log files for appending
-  let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
-  accelLogFD = fs.openSync(accelFilename, "a");
+  //let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
+  //accelLogFD = fs.openSync(accelFilename, "a");
 
   gyroLogFD = fs.openSync(`${gyroLogPrefix}${gyroLogCount}.bin`, 'a');
   hrmLogFD = fs.openSync(`${hrmLogPrefix}${hrmLogCount}.bin`, 'a');
@@ -582,6 +579,14 @@ function stopRec() {
 // ================================================================
 // Log accelerometer readings
 function logAccel() {
+  // Check if we need to start a new log file
+  if (accelCurrLogRecordCount == 0) {
+    // Start a new log file
+    accelLogCount += 1;
+    let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
+    accelLogFD = fs.openSync(accelFilename, "a");
+  }
+
   // Convert acceleration in float to a 16-bit integer
   let x = scientific.div(accel.readings.x, accelScaler);
   let y = scientific.div(accel.readings.y, accelScaler);
@@ -599,25 +604,19 @@ function logAccel() {
     fs.writeSync(accelLogFD, accelRecord);
 
     // Update the number of records
-    accelCurrLogRecordCount += accel.readings.timestamp.length;
-  }
+    accelCurrLogRecordCount += dataLength;
 
-  // Check if we need to start a new log file
-  if (accelCurrLogRecordCount >= accelLogRecordMax) {
-    // Record limit reached.
-    // Close the current log file
-    fs.closeSync(accelLogFD);
+    if (accelCurrLogRecordCount >= accelLogRecordMax) {
+      // Record limit reached.
+      // Close the current log file
+      fs.closeSync(accelLogFD);
 
-    // Start a new log file
-    accelLogCount += 1;
-    let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
-    accelLogFD = fs.openSync(accelFilename, "a");
+      // Reset the record count
+      accelCurrLogRecordCount = 0;
 
-    // Reset the record count
-    accelCurrLogRecordCount = 0;
-
-    // Send gist to companion
-    notifyGist();
+      // Send gist to companion
+      notifyGist();
+    }
   }
 }
 
@@ -710,13 +709,8 @@ function logHeart() {
 // Log body presence status
 function logPresence() {
   let currTime = Date.now()
-  console.log(`${currTime}`)
   bpsRecordTimeView[0] = (currTime / Math.pow(2, 32));
-  console.log(`${currTime / Math.pow(2, 32)}`)
-  console.log(`${bpsRecordTimeView[0]}`)
   bpsRecordTimeView[1] = (currTime & (Math.pow(2, 32) - 1));
-  console.log(`${currTime & (Math.pow(2, 32) - 1)}`)
-  console.log(`${bpsRecordTimeView[1]}`)
   bpsRecordPresView[0] = bps.present;
   fs.writeSync(bpsLogFD, bpsRecord);
 
@@ -1005,9 +999,8 @@ function listAndXferFiles() {
   if (totalXferedCount >= fileArray.length) {
     appStatus = appIsIdle;
     notifyGist();
-  } 
-  else 
-  {
+  }
+  else {
     xferFilesSequentially(fileArray, totalXferedCount);
   }
 }
