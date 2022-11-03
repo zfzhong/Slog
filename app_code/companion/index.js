@@ -122,7 +122,7 @@ function getConfigOptions() {
   let options = {};
 
   // Set device name and protocol name
-  options.deviceName = JSON.parse(settingsStorage.getItem('deviceID')).name;
+  options.deviceName = JSON.parse(settingsStorage.getItem('deviceName')).name;
   options.protocolName = JSON.parse(settingsStorage.getItem('protocolName')).values[0].name;
   
   options.accelFreq = JSON.parse(settingsStorage.getItem('accelFreq')).values[0].name;
