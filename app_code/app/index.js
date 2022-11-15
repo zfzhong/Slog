@@ -513,39 +513,8 @@ function startRec() {
   // Note down the start time
   console.log(`Logging Started at ${Date.now()}`);
 
-  // Check if accel log file sequence started
-  //if (accelLogCount == 0) {
-  //  accelLogCount = 1;
-  //}
-
-  // Check if gyro log file sequence started
-  if (gyroLogCount == 0) {
-    // Start the sequence of gyro log files
-    gyroLogCount = 1;
-  }
-
-  // Check if hrm log file sequence started
-  if (hrmLogCount == 0) {
-    // Start the sequence of gyro log files
-    hrmLogCount = 1;
-  }
-
-  // Check if bps log file sequence started
-  if (bpsLogCount == 0) {
-    // Start the sequence of gyro log files
-    bpsLogCount = 1;
-  }
-
   // Generate experiment ID
   experimentID = Date.now();
-
-  // Open the log files for appending
-  //let accelFilename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
-  //accelLogFD = fs.openSync(accelFilename, "a");
-
-  gyroLogFD = fs.openSync(`${gyroLogPrefix}${gyroLogCount}.bin`, 'a');
-  hrmLogFD = fs.openSync(`${hrmLogPrefix}${hrmLogCount}.bin`, 'a');
-  bpsLogFD = fs.openSync(`${bpsLogPrefix}${bpsLogCount}.bin`, 'a');
 
   // Start reading sensors
   activateSensors();
@@ -622,92 +591,98 @@ function logAccel() {
 
 // Log gyroscope readings
 function logGyro() {
+  // Check if we need to start a new log file
+  if (gyroCurrLogRecordCount == 0) {
+    // Start a new log file
+    gyroLogCount += 1;
+    let gyroFilename = generateFileName(deviceName, protocolName, gyroLogPrefix, gyroConfig.frequency, gyroLogCount, experimentID);
+    gyroLogFD = fs.openSync(gyroFilename, "a");
+  }
+
   // Convert gyro measurements in float to a 16-bit integer
   let x = scientific.div(gyro.readings.x, gyroScaler);
   let y = scientific.div(gyro.readings.y, gyroScaler);
   let z = scientific.div(gyro.readings.z, gyroScaler);
-  for (let i = 0; i < gyroConfig.batch; i++) {
-    gyroRecordTimeView[i] = gyro.readings.timestamp[i]
+
+  let dataLength = gyro.readings.timestamp.length;
+  for (let i = 0; i < dataLength; i++) {
+    gyroRecordTimeView[i] = gyro.readings.timestamp[i];
     gyroRecordXView[i] = Math.round(x[i]);
     gyroRecordYView[i] = Math.round(y[i]);
     gyroRecordZView[i] = Math.round(z[i]);
   }
-  fs.writeSync(gyroLogFD, gyroRecord);
 
-  // Update the number of records
-  gyroCurrLogRecordCount += gyro.readings.timestamp.length;
+  if (dataLength > 0) {
+    fs.writeSync(gyroLogFD, gyroRecord);
 
-  // Check if we need to start a new log file
-  if (gyroCurrLogRecordCount >= gyroLogRecordMax) {
-    // Record limit reached.
-    // Close the current log file
-    fs.closeSync(gyroLogFD);
+    // Update the number of records
+    gyroCurrLogRecordCount += dataLength;
 
-    // Start a new log file
-    gyroLogCount += 1;
-    gyroLogFD = fs.openSync(`${gyroLogPrefix}${gyroLogCount}.bin`, 'a');
+    // Check if we need to start a new log file
+    if (gyroCurrLogRecordCount >= gyroLogRecordMax) {
+      // Record limit reached.
+      // Close the current log file
+      fs.closeSync(gyroLogFD);
 
-    // Reset the record count
-    gyroCurrLogRecordCount = 0;
+      // Reset the record count
+      gyroCurrLogRecordCount = 0;
 
-    // Send gist to companion
-    notifyGist();
-  }
-
-  // Return here to skip printing to console
-  return;
-
-  // Display the readings on console log
-  console.log(`Gyro : ${Date.now()}`);
-  for (let i = 0; i < gyro.readings.timestamp.length; i++) {
-    console.log(`${gyro.readings.timestamp[i]}, ${gyro.readings.x[i]}, ${gyro.readings.y[i]}, ${gyro.readings.z[i]}`);
-    console.log(`${gyroRecordTimeView[i]}, ${gyroRecordXView[i]}, ${gyroRecordYView[i]}, ${gyroRecordZView[i]}`);
-    console.log(`${gyroRecordXView[i] * gyroScaler}, ${gyroRecordYView[i] * gyroScaler}, ${gyroRecordZView[i] * gyroScaler}`);
+      // Send gist to companion
+      notifyGist();
+    }
   }
 }
 
+
 // Log heart rate readings
 function logHeart() {
-  // Convert heart measurements in float to a 16-bit integer
-  for (let i = 0; i < hrm.readings.timestamp.length; i++) {
-    hrmRecordTimeView[i] = hrm.readings.timestamp[i]
-    hrmRecordHeartView[i] = hrm.readings.heartRate[i];
-  }
-  fs.writeSync(hrmLogFD, hrmRecord);
-
-  // Update the number of records
-  hrmCurrLogRecordCount += hrm.readings.timestamp.length;
-
   // Check if we need to start a new log file
-  if (hrmCurrLogRecordCount >= hrmLogRecordMax) {
-    // Record limit reached.
-    // Close the current log file
-    fs.closeSync(hrmLogFD);
-
+  if (hrmCurrLogRecordCount == 0) {
     // Start a new log file
     hrmLogCount += 1;
-    hrmLogFD = fs.openSync(`${hrmLogPrefix}${hrmLogCount}.bin`, 'a');
-
-    // Reset the record count
-    hrmCurrLogRecordCount = 0;
-
-    // Send gist to companion
-    notifyGist();
+    let hrmFilename = generateFileName(deviceName, protocolName, hrmLogPrefix, hrmConfig.frequency, hrmLogCount, experimentID);
+    //console.log('hrm Filename: ' + hrmFilename);
+    hrmLogFD = fs.openSync(hrmFilename, "a");
   }
 
-  // Return here to skip printing to console
-  return;
+  // Convert heart measurements in float to a 16-bit integer
+  let dataLength = hrm.readings.timestamp.length;
+  for (let i = 0; i < dataLength; i++) {
+    hrmRecordTimeView[i] = hrm.readings.timestamp[i];
+    hrmRecordHeartView[i] = hrm.readings.heartRate[i];
+  }
 
-  // Display the readings on console log
-  console.log(`HRM : ${Date.now()}`);
-  for (let i = 0; i < hrm.readings.timestamp.length; i++) {
-    console.log(`${hrm.readings.timestamp[i]}, ${hrm.readings.heartRate[i]}`);
-    console.log(`${hrmRecordTimeView[i]}, ${hrmRecordHeartView[i]}`);
+  if (dataLength > 0) {
+    fs.writeSync(hrmLogFD, hrmRecord);
+
+    // Update the number of records
+    hrmCurrLogRecordCount += dataLength;
+
+    // Check if we need to start a new log file
+    if (hrmCurrLogRecordCount >= hrmLogRecordMax) {
+      // Record limit reached.
+      // Close the current log file
+      fs.closeSync(hrmLogFD);
+
+      // Reset the record count
+      hrmCurrLogRecordCount = 0;
+
+      // Send gist to companion
+      notifyGist();
+    }
   }
 }
 
 // Log body presence status
 function logPresence() {
+  // Check if we need to start a new log file
+  if (bpsCurrLogRecordCount == 0) {
+    // Start a new log file
+    bpsLogCount += 1;
+    let bpsFilename = generateFileName(deviceName, protocolName, bpsLogPrefix, bpsConfig.frequency, bpsLogCount, experimentID);
+    bpsLogFD = fs.openSync(bpsFilename, "a");
+  }
+
   let currTime = Date.now()
   bpsRecordTimeView[0] = (currTime / Math.pow(2, 32));
   bpsRecordTimeView[1] = (currTime & (Math.pow(2, 32) - 1));
@@ -723,23 +698,12 @@ function logPresence() {
     // Close the current log file
     fs.closeSync(bpsLogFD);
 
-    // Start a new log file
-    bpsLogCount += 1;
-    bpsLogFD = fs.openSync(`${bpsLogPrefix}${bpsLogCount}.bin`, 'a');
-
     // Reset the record count
     bpsCurrLogRecordCount = 0;
 
     // Send gist to companion
     notifyGist();
   }
-
-  // Return here to skip printing to console
-  return;
-
-  // Display the readings on console log
-  console.log(`BPS : ${Date.now()}`);
-  console.log(`${bpsRecordTimeView[0]}, ${bpsRecordPresView[0]}`);
 }
 // ================================================================
 
@@ -883,105 +847,6 @@ function printLogFiles() {
 }
 // ================================================================
 
-
-// ================================================================
-
-// Get the next file to transfer
-function getNextXferFile() {
-  // Send all body presence files first
-  if (bpsLogCount > bpsXferedCount) {
-    return (`${bpsLogPrefix}${bpsXferedCount + 1}.bin`);
-  };
-
-  // Send all heart rate files next
-  if (hrmLogCount > hrmXferedCount) {
-    return (`${hrmLogPrefix}${hrmXferedCount + 1}.bin`);
-  };
-
-  // Send all accel files next
-  if (accelLogCount > accelXferedCount) {
-    let filename = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelXferedCount + 1, experimentID);
-    console.log("debug accel: " + filename);
-    return filename;
-  };
-
-  // Send all gyro rate files next
-  if (gyroLogCount > gyroXferedCount) {
-    return (`${gyroLogPrefix}${gyroXferedCount + 1}.bin`);
-  };
-
-  // All done
-  return (null);
-}
-
-// Set the next file to transfer
-function setNextXferFile() {
-  // Send all body presence files first
-  if (bpsLogCount > bpsXferedCount) {
-    bpsXferedCount += 1;
-    return;
-  }
-
-  // Send all heart rate files next
-  if (hrmLogCount > hrmXferedCount) {
-    hrmXferedCount += 1
-    return;
-  }
-
-  // Send all accel files next
-  if (accelLogCount > accelXferedCount) {
-    accelXferedCount += 1
-    return;
-  }
-
-  // Send all gyro rate files next
-  if (gyroLogCount > gyroXferedCount) {
-    gyroXferedCount += 1
-    return;
-  }
-}
-
-// Transfer a file
-function xferFile(file) {
-  outbox
-    .enqueueFile(file)
-    .then((ft) => {
-      console.log(`Transfer of ${ft.name} successfully queued.`);
-      ft.onchange = () => {
-        console.log('File Transfer State: ' + ft.readyState);
-        if (ft.readyState === 'transferred') {
-          console.log('Transfer of ' + ft.name + ' completed.');
-          setNextXferFile();
-          notifyGist();
-          xferNextFile();
-        }
-      }
-    })
-    .catch((error) => {
-      console.log(`Failed to schedule transfer: ${error}`);
-    })
-}
-
-// Transfer next file to companion
-function xferNextFile() {
-  // Ensure app is in transfering status
-  if (appStatus != appIsXferring) return;
-
-  // Display xfer status
-  console.log(`xferNextFile: ${getAppGist()}`);
-
-  // Get the next file to be transferred
-  let file = getNextXferFile();
-  if (file) {
-    // Initiate the transfer
-    xferFile(file)
-  } else {
-    // Nothing more to transfer
-    appStatus = appIsIdle;
-    notifyGist();
-  }
-}
-
 function listAndXferFiles() {
   const listDir = listDirSync("/private/data");
   let dirIter = listDir.next();
@@ -990,8 +855,13 @@ function listAndXferFiles() {
   while (!dirIter.done) {
     let filename = dirIter.value;
 
-    fileArray[i] = filename;
-    i += 1;
+    if ((filename.indexOf(accelLogPrefix) != -1) ||
+      (filename.indexOf(gyroLogPrefix) != -1) ||
+      (filename.indexOf(hrmLogPrefix) != -1) ||
+      (filename.indexOf(bpsLogPrefix) != -1)) {
+      fileArray[i] = filename;
+      i += 1;
+    }
 
     dirIter = listDir.next();
   }
