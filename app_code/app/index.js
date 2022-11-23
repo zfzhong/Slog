@@ -155,17 +155,34 @@ function notifyGist() {
 function listDirFiles() {
   const listDir = listDirSync("/private/data");
   let dirIter = listDir.next();
+  let accelFileCount = 0;
+  let gyroFileCount = 0;
+  let hrmFileCount = 0;
+
   while (!dirIter.done) {
     let filename = dirIter.value;
+    if (filename.indexOf(accelLogPrefix) != -1) {
+      accelFileCount += 1;
+    }
+    if (filename.indexOf(gyroLogPrefix) != -1) {
+      gyroFileCount += 1;
+    }
+    if (filename.indexOf(hrmLogPrefix) != -1) {
+      hrmFileCount += 1;
+    }
+    /*
     let stats = fs.statSync(filename);
     if (stats) {
       console.log("filename: " + filename + ", size: " + stats.size);
     } else {
       console.log(filename);
     }
-
+    */
     dirIter = listDir.next();
   }
+  console.log(`Accel Files: ${accelFileCount}`);
+  console.log(`Gyro Files: ${gyroFileCount}`);
+  console.log(`Heart Files: ${hrmFileCount}`);
 }
 
 // ================================================================
@@ -869,8 +886,7 @@ function listAndXferFiles() {
   if (totalXferedCount >= fileArray.length) {
     appStatus = appIsIdle;
     notifyGist();
-  }
-  else {
+  } else {
     xferFilesSequentially(fileArray, totalXferedCount);
   }
 }
@@ -902,7 +918,9 @@ function xferFilesSequentially(fileArray, i) {
           }
           notifyGist();
 
-          xferFilesSequentially(fileArray, i + 1);
+          if (appStatus == appIsXferring) {
+            xferFilesSequentially(fileArray, i + 1);
+          }
         }
       }
     })
