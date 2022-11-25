@@ -59,6 +59,9 @@ function init() {
   // Process new files as they are received
   inbox.addEventListener("newfile", processAllFiles);
 
+  let options = getConfigOptions();
+  setConfigOptions(options);
+
   // Process files arrived when the companion wasn’t running
   processAllFiles()
 }

@@ -169,6 +169,7 @@ function listDirFiles() {
     }
     if (filename.indexOf(hrmLogPrefix) != -1) {
       hrmFileCount += 1;
+      //xferSingleFile(filename);
     }
     /*
     let stats = fs.statSync(filename);
@@ -921,6 +922,21 @@ function xferFilesSequentially(fileArray, i) {
           if (appStatus == appIsXferring) {
             xferFilesSequentially(fileArray, i + 1);
           }
+        }
+      }
+    })
+    .catch((error) => {
+      console.log(`Failed to schedule transfer: ${error}`);
+    });
+}
+
+function xferSingleFile(filename) {
+  outbox
+    .enqueueFile(filename)
+    .then((ft) => {
+      ft.onchange = () => {
+        if (ft.readyState == 'transferred') {
+          console.log('Transfer of ' + ft.name + ' completed.');
         }
       }
     })
