@@ -73,40 +73,40 @@ function init() {
 function handleSettingsChange(evnt) {
   // Check which setting changed
   console.log(`handleSettingsChange: ${evnt.key}`);
-  switch(evnt.key) {
+  switch (evnt.key) {
     case 'logBtnClick':
       // Start or stop logging based on current app status
       if (appStatus === appIsTiming || appStatus === appIsLogging) {
-        sendMesg({type: msgStopLog});
+        sendMesg({ type: msgStopLog });
         // settingsStorage.setItem('logBtnLabel', 'Start Logging')
       } else if (appStatus === appIsIdle) {
         let options = getConfigOptions();
-        sendMesg({type: msgStartLog, data: options});
+        sendMesg({ type: msgStartLog, data: options });
         // settingsStorage.setItem('logBtnLabel', 'Stop Logging')
       };
       return;
     case 'xferBtnClick':
       // Start or stop logging based on current app status
       if (appStatus === appIsXferring) {
-        sendMesg({type: msgStopXfer});
+        sendMesg({ type: msgStopXfer });
         // settingsStorage.setItem('xferBtnLabel', 'Start Transferring')
       } else if (appStatus === appIsIdle) {
         let options = getConfigOptions();
         setConfigOptions(options);
-        sendMesg({type: msgStartXfer});
+        sendMesg({ type: msgStartXfer });
         // settingsStorage.setItem('xferBtnLabel', 'Stop Transferring')
       };
       return;
     case 'resetLogBtnClick':
       // Start or stop logging based on current app status
       if (appStatus === appIsIdle) {
-        sendMesg({type: msgResetLog});
+        sendMesg({ type: msgResetLog });
       };
       return;
     case 'resetXferBtnClick':
       // Start or stop logging based on current app status
       if (appStatus === appIsIdle) {
-        sendMesg({type: msgResetXfer});
+        sendMesg({ type: msgResetXfer });
       };
       return;
     default:
@@ -125,20 +125,23 @@ function getConfigOptions() {
   let options = {};
 
   // Set device name and protocol name
-  options.deviceName = JSON.parse(settingsStorage.getItem('deviceName')).name;
-  options.protocolName = JSON.parse(settingsStorage.getItem('protocolName')).values[0].name;
-  
-  options.accelFreq = JSON.parse(settingsStorage.getItem('accelFreq')).values[0].name;
-  options.gyroFreq = JSON.parse(settingsStorage.getItem('gyroFreq')).values[0].name;
-  options.hrmFreq = JSON.parse(settingsStorage.getItem('hrmFreq')).values[0].name;
-  // options.bpsFreq = JSON.parse(settingsStorage.getItem('bpsFreq')).values[0].name;
-  options.bpsFreq = 1
-  options.logStartTime = JSON.parse(settingsStorage.getItem('logStartTime')).values[0].value;
-  options.logStopTime = JSON.parse(settingsStorage.getItem('logStopTime')).values[0].value;
-  
+  try {
+    options.deviceName = JSON.parse(settingsStorage.getItem('deviceName')).name;
+    options.protocolName = JSON.parse(settingsStorage.getItem('protocolName')).values[0].name;
+
+    options.accelFreq = JSON.parse(settingsStorage.getItem('accelFreq')).values[0].name;
+    options.gyroFreq = JSON.parse(settingsStorage.getItem('gyroFreq')).values[0].name;
+    options.hrmFreq = JSON.parse(settingsStorage.getItem('hrmFreq')).values[0].name;
+    // options.bpsFreq = JSON.parse(settingsStorage.getItem('bpsFreq')).values[0].name;
+    options.bpsFreq = 1
+    options.logStartTime = JSON.parse(settingsStorage.getItem('logStartTime')).values[0].value;
+    options.logStopTime = JSON.parse(settingsStorage.getItem('logStopTime')).values[0].value;
+  } catch (err) {
+    console.log(err);
+  }
   console.log(`Options: ${JSON.stringify(options)}`);
-  
-  return(options);
+
+  return (options);
 }
 
 // Set the configuration options
@@ -171,14 +174,14 @@ function handlePeerClose() {
 // Process a message from the watch
 function handlePeerMessage(evt) {
   let msg = evt.data;
-  
+
   // Check the type of message
   console.log(`handlePeerMessage: type: ${msg.type} ${JSON.stringify(msg.data)}`)
   switch (msg.type) {
     case msgAppGist:
       // Update the status of the companion
       appStatus = msg.data.appStatus;
-      
+
       // Toggle the button labels based on the change in status
       switch (appStatus) {
         case appIsIdle:
@@ -193,7 +196,7 @@ function handlePeerMessage(evt) {
           settingsStorage.setItem('xferBtnLabel', 'Stop Transferring');
           break;
       }
-      
+
       // if (appStatus === appIsIdle && msg.data.appStatus === appIsLogging) {
       //  settingsStorage.setItem('logBtnLabel', 'Stop Logging');
       // } else if (appStatus === appIsLogging && msg.data.appStatus === appIsIdle) {
@@ -209,6 +212,11 @@ function handlePeerMessage(evt) {
       settingsStorage.setItem('appStatusText', `App is ${appStatusString[appStatus]}`);
       settingsStorage.setItem('logStatusText', `${msg.data.hrmLogCount} Heart, ${msg.data.accelLogCount} Accel, ${msg.data.gyroLogCount} Gyro files logged`);
       settingsStorage.setItem('xferStatusText', `${msg.data.hrmXferedCount} Heart, ${msg.data.accelXferedCount} Accel, ${msg.data.gyroXferedCount} Gyro files transferred`);
+      
+      let m = msg.data.totalFileSize / 1024 / 1024;
+      m = m.toFixed(2);
+
+      settingsStorage.setItem('fileSizeText', `Storage: ${m} MB`);
       return;
   }
 }
@@ -262,7 +270,7 @@ function printAccelLog(data) {
   }
 
   // return the content
-  return(content);
+  return (content);
 }
 
 // Read the contents of gyro log file
@@ -308,7 +316,7 @@ function printGyroLog(data) {
   }
 
   // return the content
-  return(content);
+  return (content);
 }
 
 // Read the contents of heart rate log file
@@ -342,7 +350,7 @@ function printHRMLog(data) {
   }
 
   // return the content
-  return(content);
+  return (content);
 }
 
 // Read the contents of body presence log file
@@ -360,8 +368,8 @@ function printBPSLog(data) {
     readPos += 4;
     let time2 = dataView.getUint32(readPos, true);
     readPos += 4;
-    let time = (time1 * Math.pow(2,32)) + time2;
-    
+    let time = (time1 * Math.pow(2, 32)) + time2;
+
     let pres = dataView.getUint32(readPos, true)
     readPos += 4;
 
@@ -370,7 +378,7 @@ function printBPSLog(data) {
   }
 
   // return the content
-  return(content);
+  return (content);
 }
 
 // Send the data to the web server
@@ -400,13 +408,13 @@ async function processAllFiles() {
     if (file.name.indexOf(accelLogPrefix) != -1) {
       text = printAccelLog(data)
     }
-    else if  (file.name.indexOf(gyroLogPrefix) != -1) {
+    else if (file.name.indexOf(gyroLogPrefix) != -1) {
       text = printGyroLog(data)
     }
-    else if  (file.name.indexOf(hrmLogPrefix) != -1) {
+    else if (file.name.indexOf(hrmLogPrefix) != -1) {
       text = printHRMLog(data)
     }
-    else if  (file.name.indexOf(bpsLogPrefix) != -1) {
+    else if (file.name.indexOf(bpsLogPrefix) != -1) {
       text = printBPSLog(data)
     }
     //console.log(text);

@@ -1,0 +1,69 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+%\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+%\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=20mm,
+ top=25mm,
+ bottom=25mm
+ }
+
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{enumerate}
+\usepackage{arcs}
+\usepackage{cancel}
+\usepackage{xfrac}
+\usepackage{amsthm}
+\usepackage{gensymb}
+\usepackage{xspace}
+
+\usepackage{epigraph}
+\usepackage{csquotes}
+\usepackage{soul}
+\usepackage{subcaption}
+\usepackage{verbatim}
+%\usepackage{ctex}
+
+%SetFonts
+
+%SetFonts
+
+\usepackage[inline]{asymptote}
+
+
+\pagestyle{fancy}
+\fancyhf{}
+%\rhead{Teacher David}
+\lhead{\leftmark}
+%\lfoot{Copyright \copyright 2021-2022 by Teacher David. All rights reserved.}
+
+\title{Slog: A Fitbit App For Exercise Science Research}
+\author{Zifei (David) Zhong, Srihari Nelakuditi}
+\date{January 22, 2023}							% Activate to display a given date or no date
+
+\newcommand{\latex}{\LaTeX\xspace}
+
+
+\begin{document}
+\maketitle
+
+\section{The Slog Design}
+\subsection{Heart Rate Data Logging}
+We log the heart rate data once per second (1 Hz). We don't log the data in batch. Essentially, the heart rate sensor should invoke our logging function every second, and the logging function then writes the data into a log file.
+
+One challenge is that, in case an user takes the Fitbit watch off, the heart rate sensor might stop working for a while until the user put the watch on hand again. The heart rate sensor resumes working once it detects body presence. We have to detect how long the user takes the watch off, while we don't want to log the absolute timestamp for every heart rate data entry. The solution is to compare the current entry's timestamp with previous entry's timestamp before writing the data entry into a log file. Note that this only requires keeping the previous timestamp and doing the comparison on the fly.
+
+
+
+\end{document} 

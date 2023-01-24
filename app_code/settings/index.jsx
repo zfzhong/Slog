@@ -7,6 +7,7 @@ function settingsComponent(props) {
       <Text bold align='center'>{props.settingsStorage.getItem('appStatusText')}
         <Text bold align='center'>{props.settingsStorage.getItem('logStatusText')}</Text>
         <Text bold align='center'>{props.settingsStorage.getItem('xferStatusText')}</Text>
+        <Text bold align='center'>{props.settingsStorage.getItem('fileSizeText')}</Text>
       </Text>
 
       <Section

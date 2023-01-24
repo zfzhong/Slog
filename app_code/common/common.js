@@ -4,6 +4,9 @@
 
 
 // ================================================================
+// The maximum disk space for file storage is 15MB
+export const appDiskMB = 14.4;
+
 // Possible states of the app
 export const appIsNone = 0;
 export const appIsIdle = 1;
