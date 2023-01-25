@@ -148,26 +148,26 @@ function setAppGist(gist) {
 // 
 
 function updateClockFace() {
-    // Update the status text on the clock face
-    appStatusText.text = `App: ${appStatusString[appStatus]}`;
-    logStatusText.text = `Log: ${hrmLogCount} H, ${accelLogCount} A, ${gyroLogCount} G`;
-    xferStatusText.text = `Xfer: ${hrmXferedCount} H, ${accelXferedCount} A, ${gyroXferedCount} G`;
+  // Update the status text on the clock face
+  appStatusText.text = `App: ${appStatusString[appStatus]}`;
+  logStatusText.text = `Log: ${hrmLogCount} H, ${accelLogCount} A, ${gyroLogCount} G`;
+  xferStatusText.text = `Xfer: ${hrmXferedCount} H, ${accelXferedCount} A, ${gyroXferedCount} G`;
 
-    let m = totalFileSize / 1024 / 1024;
-    m = m.toFixed(2);
+  let m = totalFileSize / 1024 / 1024;
+  m = m.toFixed(2);
 
-    fileSizeText.text = `Storage: ${m} M`;
-    appBackground.style.fill = appStatusColor[appStatus];
+  fileSizeText.text = `Storage: ${m} M`;
+  appBackground.style.fill = appStatusColor[appStatus];
 }
 
 function sendGist2Companion() {
-    // Send the gist to companion
-    if (peerSocket.readyState === peerSocket.OPEN) {
-      let mesg = { type: msgAppGist, data: getAppGist() }
-      peerSocket.send(mesg);
-    } else {
-      console.log('Socket not in open state');
-    }
+  // Send the gist to companion
+  if (peerSocket.readyState === peerSocket.OPEN) {
+    let mesg = { type: msgAppGist, data: getAppGist() }
+    peerSocket.send(mesg);
+  } else {
+    console.log('Socket not in open state');
+  }
 }
 
 function notifyGist() {
@@ -176,19 +176,21 @@ function notifyGist() {
 }
 // ================================================================
 
+// List all files on the disk and check their total size.
+// This founction might take long time to check sizes of all files, if the number
+// of files is more than 100. It might cause fitbit app to crash (unresponsive).
+// 
 function listDirFiles() {
   const listDir = listDirSync("/private/data");
   let dirIter = listDir.next();
-  let accelFileCount = 0;
-  let gyroFileCount = 0;
-  let hrmFileCount = 0;
+  let accelFileCount = 0, gyroFileCount = 0, hrmFileCount = 0, bpsFileCount = 0;
 
-  totalFileSize = 0; 
+  totalFileSize = 0;
 
   while (!dirIter.done) {
     let filename = dirIter.value;
 
-    console.log(filename);
+    //console.log(filename);
     let stats = fs.statSync(filename);
     totalFileSize += stats.size;
 
@@ -202,11 +204,16 @@ function listDirFiles() {
       hrmFileCount += 1;
       //xferSingleFile(filename);
     }
+    if (filename.indexOf(bpsLogPrefix) != -1) {
+      bpsFileCount += 1;
+    }
+
     dirIter = listDir.next();
   }
   console.log(`Accel Files: ${accelFileCount}`);
   console.log(`Gyro Files: ${gyroFileCount}`);
   console.log(`Heart Files: ${hrmFileCount}`);
+  console.log(`Presence Files: ${bpsFileCount}`);
   console.log(`totalSize: ${totalFileSize}`);
 }
 
@@ -252,7 +259,7 @@ function openApp() {
 
 
   // Debug purpose
-  listDirFiles();
+  //listDirFiles();
 
   // Set status to idle
   appStatus = appIsIdle;
@@ -703,15 +710,15 @@ function logGyro() {
 // timestamp, we close the current file and start a new file.
 function logHeart() {
   let curr = Date.now();
-  
+
   // heart rate sensor stopped working for more than 10 seconds
-  if (hrmPrevTimestamp != -1 && curr - hrmPrevTimestamp > 10*1000) {
+  if (hrmPrevTimestamp != -1 && curr - hrmPrevTimestamp > 10 * 1000) {
     fs.closeSync(hrmLogFD);
     // Reset the record count
     hrmCurrLogRecordCount = 0;
     notifyGist();
   }
-  
+
   // Check if we need to start a new log file
   if (hrmCurrLogRecordCount == 0) {
     // Start a new log file
@@ -743,7 +750,7 @@ function logHeart() {
 
       let stats = fs.statSync(currHrmLogFile);
       totalFileSize += stats.size;
-  
+
       if (totalFileSize > appDiskMB * 1024 * 1024) {
         doStopLog();
       }
