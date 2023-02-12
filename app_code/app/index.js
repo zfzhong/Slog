@@ -105,10 +105,10 @@ function getAppGist() {
     hrmLogCount: hrmLogCount,
     bpsLogCount: bpsLogCount,
 
-    accelCurrLogRecordCount: accelCurrLogRecordCount,
-    gyroCurrLogRecordCount: gyroCurrLogRecordCount,
-    hrmCurrLogRecordCount: hrmCurrLogRecordCount,
-    bpsCurrLogRecordCount: bpsCurrLogRecordCount,
+    // accelCurrLogRecordCount: accelCurrLogRecordCount,
+    // gyroCurrLogRecordCount: gyroCurrLogRecordCount,
+    // hrmCurrLogRecordCount: hrmCurrLogRecordCount,
+    // bpsCurrLogRecordCount: bpsCurrLogRecordCount,
 
     accelXferedCount: accelXferedCount,
     gyroXferedCount: gyroXferedCount,
@@ -129,10 +129,10 @@ function setAppGist(gist) {
   hrmLogCount = gist.hrmLogCount;
   bpsLogCount = gist.bpsLogCount;
 
-  accelCurrLogRecordCount = gist.accelCurrLogRecordCount;
-  gyroCurrLogRecordCount = gist.gyroCurrLogRecordCount;
-  hrmCurrLogRecordCount = gist.hrmCurrLogRecordCount;
-  bpsCurrLogRecordCount = gist.bpsCurrLogRecordCount;
+  // accelCurrLogRecordCount = gist.accelCurrLogRecordCount;
+  // gyroCurrLogRecordCount = gist.gyroCurrLogRecordCount;
+  // hrmCurrLogRecordCount = gist.hrmCurrLogRecordCount;
+  // bpsCurrLogRecordCount = gist.bpsCurrLogRecordCount;
 
   accelXferedCount = gist.accelXferedCount;
   gyroXferedCount = gist.gyroXferedCount;
@@ -190,7 +190,7 @@ function listDirFiles() {
   while (!dirIter.done) {
     let filename = dirIter.value;
 
-    //console.log(filename);
+    console.log(filename);
     let stats = fs.statSync(filename);
     totalFileSize += stats.size;
 
@@ -575,7 +575,7 @@ function startRec() {
   notifyGist();
 }
 
-// Stop reading sensor data
+// Stop reading sensor data and close logging files and reset parameters 
 function stopRec() {
   console.log("stop Rec");
 
@@ -585,15 +585,32 @@ function stopRec() {
   // Close all the log files
   try {
     fs.closeSync(accelLogFD);
+    let stats = fs.statSync(currAccelLogFile);
+    totalFileSize += stats.size;
+
     fs.closeSync(gyroLogFD);
+    stats = fs.statSync(currGyroLogFile);
+    totalFileSize += stats.size;
+    
     fs.closeSync(hrmLogFD);
+    stats = fs.statSync(currHrmLogFile);
+    totalFileSize += stats.size;
+
     fs.closeSync(bpsLogFD);
+    stats = fs.statSync(currBpsLogFile);
+    totalFileSize += stats.size;
   } catch (error) {
     console.log(error);
   }
+
+  // reset log count
+  accelCurrLogRecordCount = 0;
+  gyroCurrLogRecordCount = 0;
+  hrmCurrLogRecordCount = 0;
+  bpsCurrLogRecordCount = 0;
+
   // Change status to idle and notify companion
   appStatus = appIsIdle;
-  notifyGist();
 
   // Note down the stop time
   console.log(`Logging stopped at ${Date.now()}`);
