@@ -211,6 +211,10 @@ function settingsComponent(props) {
         label="Server URL"
         settingsKey="serverURL"
       />
+      <TextInput
+        label="Disk Space (M)"
+        settingsKey="diskSpace"
+      />
     </Page>
   );
 }

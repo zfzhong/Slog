@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "@fitbit/sdk": "~6.1.0",
+    "@fitbit/sdk": "^6.1.0",
     "@fitbit/sdk-cli": "^1.7.3"
   },
   "name": "code",
@@ -8,7 +8,7 @@
   "private": true,
   "license": "UNLICENSED",
   "fitbit": {
-    "appUUID": "0b289dd0-f8db-43de-89aa-faf151e4e56b",
+    "appUUID": "b285ba9d-c394-4279-914a-4294b391c95b",
     "appType": "app",
     "appDisplayName": "SLog_4.1",
     "iconFile": "resources/icon.png",

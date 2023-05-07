@@ -46,7 +46,7 @@ export const bpsLogPrefix = "Presence";
 // Number of records per log file
 export const accelLogRecordMax = 6000;
 export const gyroLogRecordMax = 6000;
-export const hrmLogRecordMax = 3600;
+export const hrmLogRecordMax = 120; // 1 heart rate log file every 2 min
 export const bpsLogRecordMax = 3600;
 // ================================================================
 
@@ -220,8 +220,7 @@ export function setBPSConfig(freq) {
 // ================================================================
 
 // generate file name following naming convention
-export function generateFileName(deviceName, protocolName, prefix, frequency, seqNumber, expId) {
+export function generateFileName(deviceName, protocolName, prefix, frequency, seqNumber, expId, firstRecordTimestamp) {
   // Record the timestamp when the file is created.
-  let t = Date.now();
-  return `${deviceName}_${protocolName}_${prefix}_${frequency}_${seqNumber}_${expId}_${t}.bin`;
+  return `${deviceName}_${protocolName}_${prefix}_${frequency}_${seqNumber}_${expId}_${firstRecordTimestamp}.bin`;
 }

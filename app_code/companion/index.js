@@ -19,7 +19,8 @@ import {
   accelScaler, gyroScaler, setLogStartTime, setLogStopTime,
   logStartTime, logStopTime, getLogStartDelay, getLogStopDelay,
   appIsNone, appIsIdle, appIsTiming, appIsLogging, appIsXferring, appStatusString, appStatusColor,
-  msgAppGist, msgStartLog, msgStopLog, msgStartXfer, msgStopXfer, msgResetLog, msgResetXfer
+  msgAppGist, msgStartLog, msgStopLog, msgStartXfer, msgStopXfer, msgResetLog, msgResetXfer,
+  appDiskMB
 } from '../common/common.js';
 
 // Import inbox from file transfer module
@@ -120,6 +121,19 @@ function getServerURL() {
   return serverURL;
 }
 
+function getDiskSpaceLimit() {
+  // By default, the disk space limit is set to 14.4M; However, some fitbit
+  // watches might not have disk space of 14.4M available and the user has
+  // to set it explicitly from the companion app.
+  let diskSpaceLimit = appDiskMB;
+  try {
+    diskSpaceLimit = JSON.parse(settingsStorage.getItem('diskSpace')).name;  
+  } catch (error) {
+    // no diskSpace limit set from the companion app
+  }
+  return diskSpaceLimit;
+}
+
 // Get all configuration settings
 function getConfigOptions() {
   let options = {};
@@ -128,6 +142,7 @@ function getConfigOptions() {
   try {
     options.deviceName = JSON.parse(settingsStorage.getItem('deviceName')).name;
     options.protocolName = JSON.parse(settingsStorage.getItem('protocolName')).values[0].name;
+    options.diskSpaceLimit = getDiskSpaceLimit();
 
     options.accelFreq = JSON.parse(settingsStorage.getItem('accelFreq')).values[0].name;
     options.gyroFreq = JSON.parse(settingsStorage.getItem('gyroFreq')).values[0].name;
@@ -383,7 +398,7 @@ function printBPSLog(data) {
 
 // Send the data to the web server
 function sendToServer(name, data) {
-  // console.log(`sendToServer(): content = ${data}`)
+  console.log(`sendToServer(): content = ${data}`)
   console.log(`Sending ${name} to server ...`)
   // const headers = { 'Content-type': 'application/text', 'QUERY_STRING': name, 'HTTP_COOKIE': name }
   const headers = { 'FILENAME': name }
@@ -391,6 +406,7 @@ function sendToServer(name, data) {
   // let fetchInit = {method: 'POST', headers: {"Content-type": "application/octet-stream"}, body: data}
   //console.log(`${serverURL} ${fetchInit}`);
   let serverURL = getServerURL();
+  //console.log(serverURL);
   fetch(serverURL, fetchInit);
   console.log(`Done sending ${name} to server`);
 }

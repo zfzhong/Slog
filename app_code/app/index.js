@@ -21,7 +21,7 @@ import {
   logStartTime, logStopTime, getLogStartDelay, getLogStopDelay,
   appIsNone, appIsIdle, appIsTiming, appIsLogging, appIsXferring, appStatusString, appStatusColor,
   msgAppGist, msgStartLog, msgStopLog, msgStartXfer, msgStopXfer, msgResetLog, msgResetXfer,
-  generateFileName, appDiskMB,
+  generateFileName,
 } from '../common/common.js';
 
 import { listDirSync } from "fs";
@@ -85,12 +85,12 @@ let accelXferedCount = 0, gyroXferedCount = 0, hrmXferedCount = 0, bpsXferedCoun
 let totalXferedCount = 0, totalFileSize = 0;
 
 // Get hold of all the UI elements
-const appStatusText, logStatusText, xferStatusText, fileSizeText, appBackground;
+const appStatusText = '', logStatusText = '', xferStatusText = '', fileSizeText = '', appBackground = '';
 
 // Timers to remeber for canceling if needed
 let timerLogStart, timerLogStop;
 
-let experimentID, deviceName, protocolName;
+let experimentID, deviceName, protocolName, diskSpaceLimit;
 // ================================================================
 
 
@@ -341,6 +341,7 @@ function doStartLog(options) {
 
   deviceName = options.deviceName;
   protocolName = options.protocolName;
+  diskSpaceLimit = options.diskSpaceLimit;
 
   // Schedule the start of logging
   timerLogStart = null;
@@ -591,7 +592,7 @@ function stopRec() {
     fs.closeSync(gyroLogFD);
     stats = fs.statSync(currGyroLogFile);
     totalFileSize += stats.size;
-    
+
     fs.closeSync(hrmLogFD);
     stats = fs.statSync(currHrmLogFile);
     totalFileSize += stats.size;
@@ -619,13 +620,7 @@ function stopRec() {
 
 // Log accelerometer readings
 function logAccel() {
-  // Check if we need to start a new log file
-  if (accelCurrLogRecordCount == 0) {
-    // Start a new log file
-    accelLogCount += 1;
-    currAccelLogFile = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID);
-    accelLogFD = fs.openSync(currAccelLogFile, "a");
-  }
+  let firstRecordTimestamp = 0;
 
   // Convert acceleration in float to a 16-bit integer
   let x = scientific.div(accel.readings.x, accelScaler);
@@ -634,6 +629,10 @@ function logAccel() {
 
   let dataLength = accel.readings.timestamp.length;
   for (let i = 0; i < dataLength; i++) {
+    if (i == 0) {
+      // 32-bit timestamp of the first record of the batch.
+      firstRecordTimestamp = accel.readings.timestamp[0];
+    }
     accelRecordTimeView[i] = accel.readings.timestamp[i]; // cast to a 16-bit integer
     accelRecordXView[i] = Math.round(x[i]);
     accelRecordYView[i] = Math.round(y[i]);
@@ -641,6 +640,14 @@ function logAccel() {
   }
 
   if (dataLength > 0) {
+    // Check if we need to start a new log file
+    if (accelCurrLogRecordCount == 0) {
+      // Start a new log file
+      accelLogCount += 1;
+      currAccelLogFile = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID, firstRecordTimestamp);
+      accelLogFD = fs.openSync(currAccelLogFile, "a");
+    }
+
     fs.writeSync(accelLogFD, accelRecord);
 
     // Update the number of records
@@ -654,7 +661,7 @@ function logAccel() {
       let stats = fs.statSync(currAccelLogFile);
       totalFileSize += stats.size;
 
-      if (totalFileSize > appDiskMB * 1024 * 1024) {
+      if (totalFileSize > diskSpaceLimit * 1024 * 1024) {
         doStopLog();
       }
 
@@ -669,13 +676,7 @@ function logAccel() {
 
 // Log gyroscope readings
 function logGyro() {
-  // Check if we need to start a new log file
-  if (gyroCurrLogRecordCount == 0) {
-    // Start a new log file
-    gyroLogCount += 1;
-    currGyroLogFile = generateFileName(deviceName, protocolName, gyroLogPrefix, gyroConfig.frequency, gyroLogCount, experimentID);
-    gyroLogFD = fs.openSync(currGyroLogFile, "a");
-  }
+  let firstRecordTimestamp = 0;
 
   // Convert gyro measurements in float to a 16-bit integer
   let x = scientific.div(gyro.readings.x, gyroScaler);
@@ -684,6 +685,9 @@ function logGyro() {
 
   let dataLength = gyro.readings.timestamp.length;
   for (let i = 0; i < dataLength; i++) {
+    if (i == 0) {
+      firstRecordTimestamp = gyro.readings.timestamp[0];
+    }
     gyroRecordTimeView[i] = gyro.readings.timestamp[i];
     gyroRecordXView[i] = Math.round(x[i]);
     gyroRecordYView[i] = Math.round(y[i]);
@@ -691,6 +695,14 @@ function logGyro() {
   }
 
   if (dataLength > 0) {
+    // Check if we need to start a new log file
+    if (gyroCurrLogRecordCount == 0) {
+      // Start a new log file
+      gyroLogCount += 1;
+      currGyroLogFile = generateFileName(deviceName, protocolName, gyroLogPrefix, gyroConfig.frequency, gyroLogCount, experimentID, firstRecordTimestamp);
+      gyroLogFD = fs.openSync(currGyroLogFile, "a");
+    }
+
     fs.writeSync(gyroLogFD, gyroRecord);
 
     // Update the number of records
@@ -705,7 +717,7 @@ function logGyro() {
       let stats = fs.statSync(currGyroLogFile);
       totalFileSize += stats.size;
 
-      if (totalFileSize > appDiskMB * 1024 * 1024) {
+      if (totalFileSize > diskSpaceLimit * 1024 * 1024) {
         doStopLog();
       }
 
@@ -726,34 +738,27 @@ function logGyro() {
 // current heart rate timestamp is 10 seconds more than the previous logged
 // timestamp, we close the current file and start a new file.
 function logHeart() {
-  let curr = Date.now();
-
-  // heart rate sensor stopped working for more than 10 seconds
-  if (hrmPrevTimestamp != -1 && curr - hrmPrevTimestamp > 10 * 1000) {
-    fs.closeSync(hrmLogFD);
-    // Reset the record count
-    hrmCurrLogRecordCount = 0;
-    notifyGist();
-  }
-
-  // Check if we need to start a new log file
-  if (hrmCurrLogRecordCount == 0) {
-    // Start a new log file
-    hrmLogCount += 1;
-    currHrmLogFile = generateFileName(deviceName, protocolName, hrmLogPrefix, hrmConfig.frequency, hrmLogCount, experimentID);
-    hrmLogFD = fs.openSync(currHrmLogFile, "a");
-  }
-
-  hrmPrevTimestamp = curr;
+  let firstRecordTimestamp = 0;
 
   // Convert heart measurements in float to a 16-bit integer
   let dataLength = hrm.readings.timestamp.length;
   for (let i = 0; i < dataLength; ++i) {
+    if (i == 0) {
+      firstRecordTimestamp = hrm.readings.timestamp[0];
+    }
     hrmRecordTimeView[i] = hrm.readings.timestamp[i];
     hrmRecordHeartView[i] = hrm.readings.heartRate[i];
   }
 
   if (dataLength > 0) {
+    // Check if we need to start a new log file
+    if (hrmCurrLogRecordCount == 0) {
+      // Start a new log file
+      hrmLogCount += 1;
+      currHrmLogFile = generateFileName(deviceName, protocolName, hrmLogPrefix, hrmConfig.frequency, hrmLogCount, experimentID, firstRecordTimestamp);
+      hrmLogFD = fs.openSync(currHrmLogFile, "a");
+    }
+
     fs.writeSync(hrmLogFD, hrmRecord);
 
     // Update the number of records
@@ -768,7 +773,7 @@ function logHeart() {
       let stats = fs.statSync(currHrmLogFile);
       totalFileSize += stats.size;
 
-      if (totalFileSize > appDiskMB * 1024 * 1024) {
+      if (totalFileSize > diskSpaceLimit * 1024 * 1024) {
         doStopLog();
       }
 
@@ -783,15 +788,16 @@ function logHeart() {
 
 // Log body presence status
 function logPresence() {
+  let currTime = Date.now()
+
   // Check if we need to start a new log file
   if (bpsCurrLogRecordCount == 0) {
     // Start a new log file
     bpsLogCount += 1;
-    currBpsLogFile = generateFileName(deviceName, protocolName, bpsLogPrefix, bpsConfig.frequency, bpsLogCount, experimentID);
+    currBpsLogFile = generateFileName(deviceName, protocolName, bpsLogPrefix, bpsConfig.frequency, bpsLogCount, experimentID, currTime);
     bpsLogFD = fs.openSync(currBpsLogFile, "a");
   }
 
-  let currTime = Date.now()
   bpsRecordTimeView[0] = (currTime / Math.pow(2, 32));
   bpsRecordTimeView[1] = (currTime & (Math.pow(2, 32) - 1));
   bpsRecordPresView[0] = bps.present;
@@ -809,7 +815,7 @@ function logPresence() {
     let stats = fs.statSync(currBpsLogFile);
     totalFileSize += stats.size;
 
-    if (totalFileSize > appDiskMB * 1024 * 1024) {
+    if (totalFileSize > diskSpaceLimit * 1024 * 1024) {
       doStopLog();
     }
 
