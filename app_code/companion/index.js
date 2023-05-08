@@ -127,7 +127,10 @@ function getDiskSpaceLimit() {
   // to set it explicitly from the companion app.
   let diskSpaceLimit = appDiskMB;
   try {
-    diskSpaceLimit = JSON.parse(settingsStorage.getItem('diskSpace')).name;  
+    let diskLimit = JSON.parse(settingsStorage.getItem('diskSpace')).name;  
+    if (diskLimit < diskSpaceLimit) {
+      diskSpaceLimit = diskLimit
+    }
   } catch (error) {
     // no diskSpace limit set from the companion app
   }
