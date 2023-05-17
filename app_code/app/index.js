@@ -336,7 +336,7 @@ function openApp() {
   totalCount = countAllFiles();
 
   // Debug purpose
-   listDirFiles();
+  // listDirFiles();
 
   // Set status to idle
   appStatus = appIsIdle;
