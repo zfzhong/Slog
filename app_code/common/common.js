@@ -13,9 +13,10 @@ export const appIsIdle = 1;
 export const appIsTiming = 2;
 export const appIsLogging = 3;
 export const appIsXferring = 4;
+export const appIsDeleting = 5;
 
-export const appStatusString = ['Away', 'Idle', 'Timing', 'Logging', 'Transferring']
-export const appStatusColor = ['grey', 'grey', 'yellow', 'green', 'orange']
+export const appStatusString = ['Away', 'Idle', 'Timing', 'Logging', 'Transferring', 'Deleting']
+export const appStatusColor = ['grey', 'grey', 'yellow', 'green', 'orange', 'red']
 // ================================================================
 
 

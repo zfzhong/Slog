@@ -234,7 +234,7 @@ function handlePeerMessage(evt) {
       let m = msg.data.totalFileSize / 1024 / 1024;
       m = m.toFixed(2);
 
-      settingsStorage.setItem('fileSizeText', `Storage: ${m} MB`);
+      settingsStorage.setItem('fileSizeText', `${msg.data.totalCount} Files: ${m} MB`);
       return;
   }
 }
@@ -401,7 +401,7 @@ function printBPSLog(data) {
 
 // Send the data to the web server
 function sendToServer(name, data) {
-  console.log(`sendToServer(): content = ${data}`)
+  //console.log(`sendToServer(): content = ${data}`)
   console.log(`Sending ${name} to server ...`)
   // const headers = { 'Content-type': 'application/text', 'QUERY_STRING': name, 'HTTP_COOKIE': name }
   const headers = { 'FILENAME': name }

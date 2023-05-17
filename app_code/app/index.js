@@ -19,7 +19,8 @@ import {
   hrmLogRecordMax, accelLogRecordMax, gyroLogRecordMax, bpsLogRecordMax,
   accelScaler, gyroScaler, setLogStartTime, setLogStopTime,
   logStartTime, logStopTime, getLogStartDelay, getLogStopDelay,
-  appIsNone, appIsIdle, appIsTiming, appIsLogging, appIsXferring, appStatusString, appStatusColor,
+  appIsNone, appIsIdle, appIsTiming, appIsLogging, appIsXferring, appIsDeleting,
+  appStatusString, appStatusColor,
   msgAppGist, msgStartLog, msgStopLog, msgStartXfer, msgStopXfer, msgResetLog, msgResetXfer,
   generateFileName,
 } from '../common/common.js';
@@ -64,13 +65,13 @@ let accel, gyro, hrm, bps;
 const gistFile = 'gist.cbor'
 
 // File descriptor for the log files
-let accelLogFD, gyroLogFD, hrmLogFD, bpsLogFD;
+let accelLogFD = null, gyroLogFD = null, hrmLogFD = null, bpsLogFD = null;
 
 // Status of the App
 let appStatus = appIsNone;
 
 // Number of log files generated
-let accelLogCount = 0, gyroLogCount = 0, hrmLogCount = 0, bpsLogCount = 0;
+let accelLogCount = 0, gyroLogCount = 0, hrmLogCount = 0, bpsLogCount = 0, totalCount = 0;
 
 // Get hold of current writing log files 
 let currAccelLogFile, currGyroLogFile, currHrmLogFile, currBpsLogFile;
@@ -104,6 +105,7 @@ function getAppGist() {
     gyroLogCount: gyroLogCount,
     hrmLogCount: hrmLogCount,
     bpsLogCount: bpsLogCount,
+    totalCount: totalCount,
 
     // accelCurrLogRecordCount: accelCurrLogRecordCount,
     // gyroCurrLogRecordCount: gyroCurrLogRecordCount,
@@ -128,6 +130,7 @@ function setAppGist(gist) {
   gyroLogCount = gist.gyroLogCount;
   hrmLogCount = gist.hrmLogCount;
   bpsLogCount = gist.bpsLogCount;
+  totalCount = gist.totalCount;
 
   // accelCurrLogRecordCount = gist.accelCurrLogRecordCount;
   // gyroCurrLogRecordCount = gist.gyroCurrLogRecordCount;
@@ -156,7 +159,7 @@ function updateClockFace() {
   let m = totalFileSize / 1024 / 1024;
   m = m.toFixed(2);
 
-  fileSizeText.text = `Storage: ${m} M`;
+  fileSizeText.text = `${totalCount} Files: ${m} M`;
   appBackground.style.fill = appStatusColor[appStatus];
 }
 
@@ -176,6 +179,79 @@ function notifyGist() {
 }
 // ================================================================
 
+// Count all files upon starting of the app.
+function countAllFiles() {
+  const listDir = listDirSync("/private/data");
+
+  let dirIter;
+  let count = 0;
+
+  while ((dirIter = listDir.next()) && !dirIter.done) {
+    count += 1;
+  }
+
+  return count;
+}
+
+function deleteAllFiles() {
+  // Delete 50 files a time
+  let n = 50;
+
+  appStatus = appIsDeleting;
+
+  let count = deleteFiles(n);
+  if (count >= n) {
+    setTimeout(deleteAllFiles, 1000);
+  } else {
+    // Finished deleting all files
+    totalFileSize = 0;
+
+    // Reset the logging file/record status
+    accelLogCount = 0;
+    gyroLogCount = 0;
+    hrmLogCount = 0;
+    bpsLogCount = 0;
+  
+    accelCurrLogRecordCount = 0;
+    gyroCurrLogRecordCount = 0;
+    hrmCurrLogRecordCount = 0;
+    bpsCurrLogRecordCount = 0;
+
+    appStatus = appIsIdle;
+
+  }
+  totalCount = totalCount - count;
+
+  notifyGist();
+}
+
+//Delete (at most) n files
+function deleteFiles(n) {
+  if (n <= 0) return 0;
+
+  const listDir = fs.listDirSync("/private/data");
+
+  let dirIter;
+  let count = 0;
+
+  while ((dirIter = listDir.next()) && !dirIter.done) {
+    if (count >= n) break;
+
+    let filename = dirIter.value;
+
+    if (filename.indexOf('gist') < 0) {
+      try {
+        fs.unlinkSync(filename);
+        count += 1;
+      } catch (error) {
+        console.log(`unlink file ${filename} failed.`)
+      }
+    }
+  }
+  return count;
+}
+
+
 // List all files on the disk and check their total size.
 // This founction might take long time to check sizes of all files, if the number
 // of files is more than 100. It might cause fitbit app to crash (unresponsive).
@@ -185,14 +261,12 @@ function listDirFiles() {
   let dirIter = listDir.next();
   let accelFileCount = 0, gyroFileCount = 0, hrmFileCount = 0, bpsFileCount = 0;
 
-  totalFileSize = 0;
+  //totalFileSize = 0;
+  let count = 0;
 
   while (!dirIter.done) {
     let filename = dirIter.value;
-
     console.log(filename);
-    let stats = fs.statSync(filename);
-    totalFileSize += stats.size;
 
     if (filename.indexOf(accelLogPrefix) != -1) {
       accelFileCount += 1;
@@ -202,19 +276,20 @@ function listDirFiles() {
     }
     if (filename.indexOf(hrmLogPrefix) != -1) {
       hrmFileCount += 1;
-      //xferSingleFile(filename);
     }
     if (filename.indexOf(bpsLogPrefix) != -1) {
       bpsFileCount += 1;
     }
 
+    count += 1;
     dirIter = listDir.next();
   }
   console.log(`Accel Files: ${accelFileCount}`);
   console.log(`Gyro Files: ${gyroFileCount}`);
   console.log(`Heart Files: ${hrmFileCount}`);
   console.log(`Presence Files: ${bpsFileCount}`);
-  console.log(`totalSize: ${totalFileSize}`);
+  //console.log(`totalSize: ${totalFileSize}`);
+  console.log(`totalFiles: ${count}`);
 }
 
 // ================================================================
@@ -258,8 +333,10 @@ function openApp() {
   }
 
 
+  totalCount = countAllFiles();
+
   // Debug purpose
-  //listDirFiles();
+   listDirFiles();
 
   // Set status to idle
   appStatus = appIsIdle;
@@ -457,27 +534,8 @@ function doResetLog() {
     return;
   }
 
-  // Delete all the existing log files
-  const listDir = fs.listDirSync("/private/data");
-  let dirIter;
-  while ((dirIter = listDir.next()) && !dirIter.done) {
-    fs.unlinkSync(dirIter.value);
-  }
-  totalFileSize = 0;
-
-  // Reset the logging file/record status
-  accelLogCount = 0;
-  gyroLogCount = 0;
-  hrmLogCount = 0;
-  bpsLogCount = 0;
-
-  accelCurrLogRecordCount = 0;
-  gyroCurrLogRecordCount = 0;
-  hrmCurrLogRecordCount = 0;
-  bpsCurrLogRecordCount = 0;
-
-  // Notify companion
-  notifyGist();
+  appStatus = appIsDeleting;
+  deleteAllFiles();
 }
 
 // Process the reset transfer message
@@ -585,21 +643,26 @@ function stopRec() {
 
   // Close all the log files
   try {
-    fs.closeSync(accelLogFD);
-    let stats = fs.statSync(currAccelLogFile);
-    totalFileSize += stats.size;
-
-    fs.closeSync(gyroLogFD);
-    stats = fs.statSync(currGyroLogFile);
-    totalFileSize += stats.size;
-
-    fs.closeSync(hrmLogFD);
-    stats = fs.statSync(currHrmLogFile);
-    totalFileSize += stats.size;
-
-    fs.closeSync(bpsLogFD);
-    stats = fs.statSync(currBpsLogFile);
-    totalFileSize += stats.size;
+    if (accelLogFD) {
+      fs.closeSync(accelLogFD);
+      let stats = fs.statSync(currAccelLogFile);
+      totalFileSize += stats.size;
+    }
+    if (gyroLogFD) {
+      fs.closeSync(gyroLogFD);
+      stats = fs.statSync(currGyroLogFile);
+      totalFileSize += stats.size;
+    }
+    if (hrmLogFD) {
+      fs.closeSync(hrmLogFD);
+      stats = fs.statSync(currHrmLogFile);
+      totalFileSize += stats.size;
+    }
+    if (bpsLogFD) {
+      fs.closeSync(bpsLogFD);
+      stats = fs.statSync(currBpsLogFile);
+      totalFileSize += stats.size;
+    }
   } catch (error) {
     console.log(error);
   }
@@ -615,6 +678,7 @@ function stopRec() {
 
   // Note down the stop time
   console.log(`Logging stopped at ${Date.now()}`);
+  notifyGist();
 }
 // ================================================================
 
@@ -644,6 +708,8 @@ function logAccel() {
     if (accelCurrLogRecordCount == 0) {
       // Start a new log file
       accelLogCount += 1;
+      totalCount += 1;
+
       currAccelLogFile = generateFileName(deviceName, protocolName, accelLogPrefix, accelConfig.frequency, accelLogCount, experimentID, firstRecordTimestamp);
       accelLogFD = fs.openSync(currAccelLogFile, "a");
     }
@@ -699,6 +765,8 @@ function logGyro() {
     if (gyroCurrLogRecordCount == 0) {
       // Start a new log file
       gyroLogCount += 1;
+      totalCount += 1;
+
       currGyroLogFile = generateFileName(deviceName, protocolName, gyroLogPrefix, gyroConfig.frequency, gyroLogCount, experimentID, firstRecordTimestamp);
       gyroLogFD = fs.openSync(currGyroLogFile, "a");
     }
@@ -755,6 +823,8 @@ function logHeart() {
     if (hrmCurrLogRecordCount == 0) {
       // Start a new log file
       hrmLogCount += 1;
+      totalCount += 1;
+
       currHrmLogFile = generateFileName(deviceName, protocolName, hrmLogPrefix, hrmConfig.frequency, hrmLogCount, experimentID, firstRecordTimestamp);
       hrmLogFD = fs.openSync(currHrmLogFile, "a");
     }
@@ -794,6 +864,8 @@ function logPresence() {
   if (bpsCurrLogRecordCount == 0) {
     // Start a new log file
     bpsLogCount += 1;
+    totalCount += 1;
+
     currBpsLogFile = generateFileName(deviceName, protocolName, bpsLogPrefix, bpsConfig.frequency, bpsLogCount, experimentID, currTime);
     bpsLogFD = fs.openSync(currBpsLogFile, "a");
   }

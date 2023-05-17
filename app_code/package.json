@@ -4,13 +4,13 @@
     "@fitbit/sdk-cli": "^1.7.3"
   },
   "name": "code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "UNLICENSED",
   "fitbit": {
     "appUUID": "b285ba9d-c394-4279-914a-4294b391c95b",
     "appType": "app",
-    "appDisplayName": "SLog_4.1",
+    "appDisplayName": "SLog_4.2",
     "iconFile": "resources/icon.png",
     "wipeColor": "#ffffff",
     "requestedPermissions": [
@@ -25,7 +25,7 @@
     ],
     "i18n": {
       "en-US": {
-        "name": "SLog_4.1"
+        "name": "SLog_4.2"
       }
     },
     "defaultLanguage": "en-US"
