@@ -129,6 +129,22 @@ companion.
 
 ---
 
+## Known device behaviour
+
+The Fitbit accelerometer batch API returns readings whose device timestamps
+show **gaps and duplicated blocks**. This was isolated in September 2022 by
+writing an independent absolute timestamp into every row: had the corruption
+come from the logging code, those timestamps would have been incoherent too.
+They were not, which places the fault in the vendor's batch read rather than
+anything downstream.
+
+Anyone analysing accelerometer data collected with this application, or with
+any Fitbit batch-mode logger, should expect to de-duplicate and check for gaps
+on the device timestamp rather than assume a uniform sampling interval.
+
+See [docs/fitbit-accelerometer-batch-timestamps.md](docs/fitbit-accelerometer-batch-timestamps.md)
+for the diagnostic method and the recorded data.
+
 ## Related projects
 
 Slog is the Fitbit-platform member of a series of measurement instruments built
