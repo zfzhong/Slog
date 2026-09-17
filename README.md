@@ -201,7 +201,7 @@ for the same research programme:
 | **Slog** (this repository) | Fitbit Sense | 2022–2023 |
 | [slog-file-server](https://github.com/zfzhong/slog-file-server) | Python ingest server | 2022–2025 |
 | [Slogger](https://github.com/zfzhong/slogger) | Wear OS watches and Android tablets | 2024– |
-| [Slog_HR](https://github.com/ACOI-UofSC/Slog_HR) | Deployment repository and user manual, Arnold Childhood Obesity Initiative, University of South Carolina | 2023–2024 |
+| [Slog_HR](https://github.com/ACOI-UofSC/Slog_HR) | Deployment repository, and [The Slogger Manual](https://github.com/ACOI-UofSC/Slog_HR/blob/main/docs/slogger-manual.pdf), Arnold Childhood Obesity Initiative, University of South Carolina | 2023–2024 |
 
 Slogger was originally named **WearSlog** and renamed in January 2024.
 
