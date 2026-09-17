@@ -145,6 +145,52 @@ on the device timestamp rather than assume a uniform sampling interval.
 See [docs/fitbit-accelerometer-batch-timestamps.md](docs/fitbit-accelerometer-batch-timestamps.md)
 for the diagnostic method and the recorded data.
 
+## Publications
+
+Data analysed in the following peer-reviewed studies were collected from the
+Fitbit Sense with this application.
+
+**Weaver RG, Chandrashekhar MVS, Armstrong B, White JW III, Finnegan O, Cepni AB,
+Burkart S, Beets M, Adams EL, de Zambotti M, Welk GJ, Nelakuditi S, Brown D III,
+Pate R, Wang Y, Ghosal R, Zhong Z, Yang H.** Jerks are useful: extracting pulse
+rate from wrist-placed accelerometry jerk during sleep in children. *SLEEP*
+2025;48(2):zsae099. Published online 3 May 2024. doi:10.1093/sleep/zsae099
+
+Accelerometry from the Fitbit Sense was collected with the Fitbit-platform
+version of this application. The paper describes the devices used but does not
+name the collection application.
+
+**Finnegan OL, White JW III, Armstrong B, Adams EL, Burkart S, Beets MW,
+Nelakuditi S, Zhong Z, Yang H, Kiely KP, Ghosal R, Fairclough SJ, Welk GJ,
+Weaver RG.** The ability of monitor-independent movement summary units,
+Euclidean norm minus one, and mean amplitude deviation to harmonize
+accelerometry data across research-grade and consumer wearable devices during
+simulated free-living physical activity in children. *Journal for the
+Measurement of Physical Behaviour* 2025;8(1). doi:10.1123/jmpb.2025-0002
+
+> "Slogger is a sensor tracking application that our team developed to access
+> and record underlying accelerometry and heart rate data from Fitbit devices."
+
+**Weaver RG, White JW, Finnegan O, Yang H, Zhong Z, Kiely K, Jones C, Tong Y,
+Nelakuditi S, Ghosal R, Brown DE, Pate R, Welk GJ, de Zambotti M, Wang Y,
+Burkart S, Adams EL, Armstrong B, Beets MW.** Predicting sleep and sleep stage
+in children using actigraphy and heartrate via a long short-term memory deep
+learning algorithm: a performance evaluation. *Journal of Sleep Research*
+2026;35(1):e70149. doi:10.1111/jsr.70149
+
+> "For Fitbit, the research team developed a custom application (Slogger). This
+> application leveraged the Fitbit application programming interface to record
+> and export the raw actigraphy data collected via Fitbit."
+
+Raw actigraphy was recorded at 50 Hz against overnight polysomnography in 238
+children.
+
+Some papers refer to this application as "Slogger", the name of its later Wear
+OS and Android counterpart. The recording logic and the upload server are the
+same across both.
+
+---
+
 ## Related projects
 
 Slog is the Fitbit-platform member of a series of measurement instruments built
